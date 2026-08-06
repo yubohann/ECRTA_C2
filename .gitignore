@@ -1,0 +1,10 @@
+logs/
+rosbag/
+*.bag
+*.rosbag
+__pycache__/
+*.pyc
+.DS_Store
+.vscode/
+.idea/
+tmp/
