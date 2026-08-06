@@ -1,0 +1,12 @@
+param	value	match
+prct_enable_retry_suppression	true	true	1
+prct_backoff_enabled	false	false	1
+prct_repeat_threshold	3	3	1
+prct_cooldown_s	5.0	5.0	1
+prct_backoff_initial_s	5.0	5.0	1
+prct_backoff_max_s	30.0	30.0	1
+prct_backoff_factor	2.0	2.0	1
+prct_enable_peer_takeover	false	false	1
+prct_peer_cert_wait_s	0.25	0.25	1
+prct_peer_handoff_timeout_s	2.0	2.0	1
+prct_peer_state_max_age_s	2.0	2.0	1

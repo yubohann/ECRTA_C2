@@ -38,7 +38,7 @@ mkdir -p "$batch_root"
   printf 'scene=%s\ndrone_num=%s\nduration_s=%s\ncount=%s\ncommunication_threshold_m=%s\n' \
     "$scene" "$drone_num" "$duration_s" "$count" "$communication_threshold"
   printf 'classification=repeated_instances_not_seed_indexed_trials\n'
-  printf 'method_set=B0,B1,B1+\n'
+  printf 'method_set=B0,B1,B1+ (backoff_enabled isolates B1 fixed cooldown from B1+ adaptive backoff)\n'
   printf 'workspace=%s\n' "$ECRTA_WORKSPACE"
   sha256sum "$runner"
   sha256sum "$ECRTA_WORKSPACE/src/swarm_exploration/exploration_manager/launch/${scene}.launch"
@@ -55,15 +55,16 @@ for ((i = 1; i <= count; i++)); do
         candidates=0; peers=0; suppress=false; takeover=false; c3=false
         ;;
       b1)
-        candidates=0; peers=0; suppress=true; takeover=false; c3=false
+        candidates=0; peers=0; suppress=true; takeover=false; c3=false; backoff_enabled=false
         ;;
       b1plus)
-        candidates=0; peers=0; suppress=true; takeover=false; c3=false
+        candidates=0; peers=0; suppress=true; takeover=false; c3=false; backoff_enabled=true
         ;;
     esac
     backoff_initial=5.0
     backoff_max=30.0
     backoff_factor=2.0
+    if [[ "$method" == "b0" ]]; then backoff_enabled=false; fi
 
     run_id="b1plus_${batch_id}_${method}_${scene}_uav${drone_num}_run_$(printf '%03d' "$i")"
     run_dir="$ECRTA_LOG_ROOT/formal_b1plus/$scene/uav_$drone_num/$run_id"
@@ -71,13 +72,13 @@ for ((i = 1; i <= count; i++)); do
       echo "skip existing: $run_dir"
       continue
     fi
-    echo "start: $run_id method=$method scene=$scene uav=$drone_num backoff=5/30/2"
+    echo "start: $run_id method=$method scene=$scene uav=$drone_num backoff=5/30/2 enabled=$backoff_enabled"
     set +e
     PRCT_RUN_ROOT=formal_b1plus "$runner" "$scene" "$drone_num" "$duration_s" "$run_id" \
       "$communication_threshold" "$candidates" "$peers" "$suppress" \
       "3" "5.0" "$takeover" "0.25" "2.0" "2.0" "$c3" \
       "1.0" "0.5" "0.5" "0.5" "2.0" "2.0" "3.0" "1.0" "3" "0.3" "0.6" "30.0" "3" "120.0" \
-      "$backoff_initial" "$backoff_max" "$backoff_factor"
+      "$backoff_initial" "$backoff_max" "$backoff_factor" "$backoff_enabled"
     run_exit=$?
     set -e
 

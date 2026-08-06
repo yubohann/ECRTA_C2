@@ -9,7 +9,7 @@ source "$activation_script"
 set -u
 
 if (( $# < 1 )); then
-  echo "usage: run_scene_pilot.sh <open_plan_office|cubicle_office|octa_maze> [drone_num] [duration_s] [run_id] [communication_threshold_m] [reachability_shadow_max_candidates] [reachability_peer_shadow_max_peers] [prct_enable_retry_suppression] [prct_repeat_threshold] [prct_cooldown_s] [prct_enable_peer_takeover] [prct_peer_cert_wait_s] [prct_peer_handoff_timeout_s] [prct_peer_state_max_age_s] [c3_enable_marginal_gate] [c3_benefit_margin_s] [c3_trust_threshold] [c3_load_weight] [c3_handoff_overhead_s] [c3_trust_penalty_s] [c3_nominal_speed_m_s] [c3_owner_fallback_penalty_s] [c3_owner_stuck_alpha] [c3_min_repeat_count] [c3_owner_repeat_cost_s] [c3_peer_cert_grace_s] [c3_takeover_cooldown_s]" >&2
+  echo "usage: run_scene_pilot.sh <open_plan_office|cubicle_office|octa_maze> [drone_num] [duration_s] [run_id] [communication_threshold_m] [reachability_shadow_max_candidates] [reachability_peer_shadow_max_peers] [prct_enable_retry_suppression] [prct_repeat_threshold] [prct_cooldown_s] [prct_enable_peer_takeover] [prct_peer_cert_wait_s] [prct_peer_handoff_timeout_s] [prct_peer_state_max_age_s] [c3_enable_marginal_gate] [c3_benefit_margin_s] [c3_trust_threshold] [c3_load_weight] [c3_handoff_overhead_s] [c3_trust_penalty_s] [c3_nominal_speed_m_s] [c3_owner_fallback_penalty_s] [c3_owner_stuck_alpha] [c3_min_repeat_count] [c3_owner_repeat_cost_s] [c3_peer_cert_grace_s] [c3_takeover_cooldown_s] [prct_backoff_initial_s] [prct_backoff_max_s] [prct_backoff_factor] [prct_backoff_enabled]" >&2
   exit 64
 fi
 
@@ -45,6 +45,7 @@ c3_takeover_completed_cooldown_s="${29:-120.0}"
 prct_backoff_initial_s="${30:-5.0}"
 prct_backoff_max_s="${31:-30.0}"
 prct_backoff_factor="${32:-2.0}"
+prct_backoff_enabled="${33:-false}"
 
 if ! [[ "$reachability_shadow_max_candidates" =~ ^[0-9]+$ ]]; then
   echo "reachability_shadow_max_candidates must be a non-negative integer" >&2
@@ -82,6 +83,10 @@ for prct_backoff_param in "$prct_backoff_initial_s" "$prct_backoff_max_s" "$prct
 done
 if ! awk -v v="$prct_backoff_factor" 'BEGIN { exit !(v > 0.0) }'; then
   echo "prct_backoff_factor must be greater than 0" >&2
+  exit 64
+fi
+if [[ "$prct_backoff_enabled" != "true" && "$prct_backoff_enabled" != "false" ]]; then
+  echo "prct_backoff_enabled must be true or false" >&2
   exit 64
 fi
 if [[ "$prct_enable_peer_takeover" != "true" && "$prct_enable_peer_takeover" != "false" ]]; then
@@ -147,6 +152,7 @@ printf 'activation_script=%s\n' "$activation_script" >> "$run_dir/run_manifest.t
 printf 'communication_threshold_m=%s\n' "$communication_threshold" >> "$run_dir/run_manifest.txt"
 printf 'reachability_shadow_max_candidates=%s\n' "$reachability_shadow_max_candidates" >> "$run_dir/run_manifest.txt"
 printf 'reachability_peer_shadow_max_peers=%s\n' "$reachability_peer_shadow_max_peers" >> "$run_dir/run_manifest.txt"
+printf 'prct_backoff_enabled=%s\n' "$prct_backoff_enabled" >> "$run_dir/run_manifest.txt"
 printf 'prct_enable_retry_suppression=%s\nprct_repeat_threshold=%s\nprct_cooldown_s=%s\n' \
   "$prct_enable_retry_suppression" "$prct_repeat_threshold" "$prct_cooldown_s" >> "$run_dir/run_manifest.txt"
 printf 'prct_backoff_initial_s=%s\nprct_backoff_max_s=%s\nprct_backoff_factor=%s\n' \
@@ -261,7 +267,8 @@ launch_args=("drone_num:=$drone_num" "communication_threshold:=$communication_th
 launch_args+=("prct_enable_retry_suppression:=$prct_enable_retry_suppression" \
   "prct_repeat_threshold:=$prct_repeat_threshold" "prct_cooldown_s:=$prct_cooldown_s")
 launch_args+=("prct_backoff_initial_s:=$prct_backoff_initial_s" \
-  "prct_backoff_max_s:=$prct_backoff_max_s" "prct_backoff_factor:=$prct_backoff_factor")
+  "prct_backoff_max_s:=$prct_backoff_max_s" "prct_backoff_factor:=$prct_backoff_factor" \
+  "prct_backoff_enabled:=$prct_backoff_enabled")
 launch_args+=("prct_enable_peer_takeover:=$prct_enable_peer_takeover" \
   "prct_peer_cert_wait_s:=$prct_peer_cert_wait_s" \
   "prct_peer_handoff_timeout_s:=$prct_peer_handoff_timeout_s" \
@@ -276,10 +283,10 @@ if (( reachability_peer_shadow_max_peers > 0 )); then
 fi
 roslaunch exploration_manager "$launch_file" "${launch_args[@]}" > "$run_dir/roslaunch.log" 2>&1 &
 launch_pid=$!
-printf 'launch_pid=%s\nlaunch_command=roslaunch exploration_manager %s drone_num:=%s communication_threshold:=%s reachability_shadow_max_candidates:=%s reachability_peer_shadow_max_peers:=%s prct_enable_retry_suppression:=%s prct_repeat_threshold:=%s prct_cooldown_s:=%s prct_enable_peer_takeover:=%s prct_peer_cert_wait_s:=%s prct_peer_handoff_timeout_s:=%s prct_peer_state_max_age_s:=%s\n' \
+printf 'launch_pid=%s\nlaunch_command=roslaunch exploration_manager %s drone_num:=%s communication_threshold:=%s reachability_shadow_max_candidates:=%s reachability_peer_shadow_max_peers:=%s prct_enable_retry_suppression:=%s prct_backoff_enabled:=%s prct_repeat_threshold:=%s prct_cooldown_s:=%s prct_enable_peer_takeover:=%s prct_peer_cert_wait_s:=%s prct_peer_handoff_timeout_s:=%s prct_peer_state_max_age_s:=%s\n' \
   "$launch_pid" "$launch_file" "$drone_num" "$communication_threshold" \
   "$reachability_shadow_max_candidates" "$reachability_peer_shadow_max_peers" \
-  "$prct_enable_retry_suppression" "$prct_repeat_threshold" "$prct_cooldown_s" \
+  "$prct_enable_retry_suppression" "$prct_backoff_enabled" "$prct_repeat_threshold" "$prct_cooldown_s" \
   "$prct_enable_peer_takeover" "$prct_peer_cert_wait_s" "$prct_peer_handoff_timeout_s" \
   "$prct_peer_state_max_age_s" >> "$run_dir/run_manifest.txt"
 printf 'c3_launch_args=c3_enable_marginal_gate:=%s c3_benefit_margin_s:=%s c3_trust_threshold:=%s c3_load_weight:=%s c3_handoff_overhead_s:=%s c3_trust_penalty_s:=%s c3_nominal_speed_m_s:=%s c3_owner_fallback_penalty_s:=%s c3_owner_stuck_alpha:=%s c3_min_repeat_count:=%s c3_owner_repeat_cost_s:=%s c3_peer_cert_grace_s:=%s c3_takeover_cooldown_s:=%s c3_max_takeover_attempts:=%s c3_takeover_completed_cooldown_s:=%s\n' "$c3_enable_marginal_gate" "$c3_benefit_margin_s" "$c3_trust_threshold" "$c3_load_weight" "$c3_handoff_overhead_s" "$c3_trust_penalty_s" "$c3_nominal_speed_m_s" "$c3_owner_fallback_penalty_s" "$c3_owner_stuck_alpha" "$c3_min_repeat_count" "$c3_owner_repeat_cost_s" "$c3_peer_cert_grace_s" "$c3_takeover_cooldown_s" "$c3_max_takeover_attempts" "$c3_takeover_completed_cooldown_s" >> "$run_dir/run_manifest.txt"
@@ -331,6 +338,7 @@ prct_check_file="$run_dir/prct_check.tsv"
 printf 'param\tvalue\tmatch\n' > "$prct_check_file"
 prct_check_failed=0
 for prct_pair in "prct_enable_retry_suppression:$prct_enable_retry_suppression" \
+                 "prct_backoff_enabled:$prct_backoff_enabled" \
                  "prct_repeat_threshold:$prct_repeat_threshold" \
                  "prct_cooldown_s:$prct_cooldown_s" \
                  "prct_backoff_initial_s:$prct_backoff_initial_s" \

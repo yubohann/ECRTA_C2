@@ -1,0 +1,242 @@
+{
+  "all_expected_finished_by_local_rule": true,
+  "allocation": {
+    "assignment_event_count": 27,
+    "candidate_set_count": 10,
+    "cost_unit": "c2_allocation_cost; not seconds",
+    "failed_result_count": 0,
+    "nominal_tour_cost_count": 27,
+    "nominal_tour_cost_p50": 50.39137991263863,
+    "nominal_tour_cost_p95": 323.2329353075872,
+    "successful_result_count": 10
+  },
+  "allocation_seq_audit": {
+    "events_with_positive_local_seq": 421,
+    "events_with_zero_or_missing_seq": 507,
+    "positive_local_seq_values": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "scope": "node-local telemetry only; not a global task identifier"
+  },
+  "astar": {
+    "candidate_neighbors_count": 3,
+    "candidate_neighbors_max": 817154,
+    "candidate_neighbors_p50": 805298,
+    "candidate_neighbors_p95": 815968.4,
+    "discovered_nodes_count": 3,
+    "discovered_nodes_max": 16064,
+    "discovered_nodes_p50": 16064,
+    "discovered_nodes_p95": 16064.0,
+    "elapsed_ros_s_count": 3,
+    "elapsed_ros_s_max": 0.081581,
+    "elapsed_ros_s_p50": 0.081027,
+    "elapsed_ros_s_p95": 0.0815256,
+    "elapsed_wall_s_count": 3,
+    "elapsed_wall_s_max": 0.081581,
+    "elapsed_wall_s_p50": 0.081027,
+    "elapsed_wall_s_p95": 0.0815256,
+    "expanded_nodes_count": 3,
+    "expanded_nodes_max": 31429,
+    "expanded_nodes_p50": 30973,
+    "expanded_nodes_p95": 31383.4,
+    "failure_diagnostic_count": 3,
+    "failure_target_source_counts": {
+      "single_frontier_top_view": 3
+    },
+    "goal_coordinate_counts": {
+      "(5.0, 1.0, 1.0, 2.952, 8.51, 1.242)": 3
+    },
+    "node_pool_utilization_count": 3,
+    "node_pool_utilization_max": 0.016065,
+    "node_pool_utilization_p50": 0.016065,
+    "node_pool_utilization_p95": 0.016065,
+    "start_goal_raw_state_counts": {
+      "(1, 1, 0, 0, 1, 1)": 3
+    },
+    "target_source_counts": {
+      "fallback_nearest_to_assigned_center": 39,
+      "first_frontier_top_view": 70,
+      "single_frontier_top_view": 64
+    },
+    "termination_counts": {
+      "open_set_exhausted": 3
+    }
+  },
+  "event_counts": {
+    "allocation_assignment": 27,
+    "allocation_candidate_set": 10,
+    "allocation_request": 10,
+    "allocation_result": 10,
+    "allocation_task": 188,
+    "astar_search_diagnostic": 3,
+    "explore_request": 176,
+    "explore_result": 176,
+    "fsm_transition": 534,
+    "initialize": 3,
+    "lkh_request": 358,
+    "lkh_result": 358,
+    "prct_candidate_filter": 1,
+    "prct_retry_suppression_register": 3,
+    "prct_retry_suppression_skip": 1,
+    "target_selection": 173,
+    "traj_request": 177,
+    "traj_result": 177,
+    "trajectory_end": 170,
+    "trajectory_start": 174
+  },
+  "finish_drone_ids": [
+    1,
+    2,
+    3
+  ],
+  "finish_wall_time_by_drone": {
+    "1": 1786056596.9002762,
+    "2": 1786056576.8882654,
+    "3": 1786056578.67342
+  },
+  "json_parse_errors": [],
+  "limitations": [
+    "No upstream machine-readable seed protocol was released.",
+    "FINISH state transitions are a local observation rule, not the paper's stated global completion metric.",
+    "Task-level travel/service boundaries are not uniquely recoverable from the current telemetry.",
+    "Trajectory duration ratios measure interrupted local trajectory segments, not C2 allocation-cost calibration."
+  ],
+  "lkh": {
+    "ACVRP": {
+      "duration_count": 10,
+      "duration_max_wall_s": 0.052174,
+      "duration_p50_wall_s": 0.0316865,
+      "duration_p95_wall_s": 0.04930119999999999,
+      "failure": 0,
+      "success": 10
+    },
+    "ATSP-frontier": {
+      "duration_count": 135,
+      "duration_max_wall_s": 0.005086,
+      "duration_p50_wall_s": 0.001007,
+      "duration_p95_wall_s": 0.0016875999999999996,
+      "failure": 0,
+      "success": 135
+    },
+    "ATSP-grid": {
+      "duration_count": 213,
+      "duration_max_wall_s": 0.049618,
+      "duration_p50_wall_s": 0.001376,
+      "duration_p95_wall_s": 0.0035963999999999935,
+      "failure": 0,
+      "success": 213
+    }
+  },
+  "local_finish_makespan_wall_s": 82.01048183441162,
+  "paper_comparable": false,
+  "per_drone": {
+    "1": {
+      "allocation_assignment": 27,
+      "allocation_candidate_set": 10,
+      "allocation_request": 10,
+      "allocation_result": 10,
+      "allocation_task": 188,
+      "astar_search_diagnostic": 3,
+      "explore_request": 75,
+      "explore_result": 75,
+      "fsm_transition": 217,
+      "initialize": 1,
+      "lkh_request": 146,
+      "lkh_result": 146,
+      "prct_candidate_filter": 1,
+      "prct_retry_suppression_register": 3,
+      "prct_retry_suppression_skip": 1,
+      "target_selection": 74,
+      "traj_request": 74,
+      "traj_result": 74,
+      "trajectory_end": 71,
+      "trajectory_start": 71
+    },
+    "2": {
+      "explore_request": 52,
+      "explore_result": 52,
+      "fsm_transition": 163,
+      "initialize": 1,
+      "lkh_request": 101,
+      "lkh_result": 101,
+      "target_selection": 51,
+      "traj_request": 53,
+      "traj_result": 53,
+      "trajectory_end": 51,
+      "trajectory_start": 53
+    },
+    "3": {
+      "explore_request": 49,
+      "explore_result": 49,
+      "fsm_transition": 154,
+      "initialize": 1,
+      "lkh_request": 111,
+      "lkh_result": 111,
+      "target_selection": 48,
+      "traj_request": 50,
+      "traj_result": 50,
+      "trajectory_end": 48,
+      "trajectory_start": 50
+    }
+  },
+  "planning": {
+    "explore_failure_count": 6,
+    "explore_failure_reasons": {
+      "no_grid": 3,
+      "trajectory_fail": 3
+    },
+    "explore_success_count": 170,
+    "trajectory_plan_failure_count": 3,
+    "trajectory_plan_failure_duration_count": 3,
+    "trajectory_plan_failure_duration_p50_wall_s": 0.08239,
+    "trajectory_plan_failure_duration_p95_wall_s": 0.083137,
+    "trajectory_plan_failure_reasons": {
+      "astar_fail": 3
+    },
+    "trajectory_plan_success_count": 174
+  },
+  "run_dir": "/home/c2dev/c2_explorer_reproduction/logs/reachability_retry/pilot_b1plus_v2/open_plan_office/uav_3/b1plus_v2_b1plus_reset_pilot",
+  "schema_version": 5,
+  "status": "pilot-observation-only",
+  "task_identity": {
+    "allocation_task_event_count": 188,
+    "scope": "identity telemetry only; not a task-level execution-time label",
+    "target_match_kind_counts": {
+      "assigned_center": 7,
+      "unmatched_frontier": 166
+    },
+    "target_selection_count": 173,
+    "target_selection_with_grid_id": 173,
+    "target_selection_with_stable_center_id": 0,
+    "trajectory_end_with_stable_center_id": 0,
+    "trajectory_start_with_stable_center_id": 0
+  },
+  "telemetry_files": [
+    "/home/c2dev/c2_explorer_reproduction/logs/reachability_retry/pilot_b1plus_v2/open_plan_office/uav_3/b1plus_v2_b1plus_reset_pilot/telemetry_drone_1.jsonl",
+    "/home/c2dev/c2_explorer_reproduction/logs/reachability_retry/pilot_b1plus_v2/open_plan_office/uav_3/b1plus_v2_b1plus_reset_pilot/telemetry_drone_2.jsonl",
+    "/home/c2dev/c2_explorer_reproduction/logs/reachability_retry/pilot_b1plus_v2/open_plan_office/uav_3/b1plus_v2_b1plus_reset_pilot/telemetry_drone_3.jsonl"
+  ],
+  "trajectory_end_reasons": {
+    "frontier_covered": 159,
+    "periodic_replan": 11
+  },
+  "trajectory_pairing": {
+    "duration_ratio_count": 170,
+    "execution_to_planned_duration_max": 0.4477263344534304,
+    "execution_to_planned_duration_p50": 0.09953185761332511,
+    "execution_to_planned_duration_p95": 0.3480305381359424,
+    "matched_segments": 170,
+    "scope": "trajectory segments only; not a task-level travel/service metric",
+    "unmatched_end_count": 0,
+    "unmatched_start_count": 4
+  }
+}
