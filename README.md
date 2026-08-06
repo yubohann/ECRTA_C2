@@ -1,6 +1,6 @@
 # ECRTA_C2
 
-C2-Explorer 改进实验库。当前有效主方法是 B1+：失败链自适应指数退避；C3/peer takeover 已进入机制级否定，不再作为主贡献。
+C2-Explorer 改进实验库。当前有效主方法是 B1+ v3：失败确认目标隔离；C3/peer takeover 已进入机制级否定，不再作为主贡献。
 
 ## 当前状态
 
@@ -22,7 +22,7 @@ C2-Explorer 改进实验库。当前有效主方法是 B1+：失败链自适应�
 
 - B0：原始 C2。
 - B1：只增加重复 A* 失败抑制和冷却。
-- B1+：B1 冷却改为按失败链指数退避，默认 5/10/20/30 s；takeover 只作为冷却后仍失败的实验性后备。
+- B1+ v3：在 B1 固定冷却之上，达到阈值后当前 frontier map epoch 内隔离失败目标；v2 指数退避已因 n=5 无收益判废。
 - B2：只读 peer 可达性证书。
 - B3：证书 + 事件触发 peer takeover。
 - C3：B2 证书框架 + trust 门控 + 边际成本接管 + takeover-completed 失效 + 无收益回退。
@@ -58,10 +58,10 @@ C2-Explorer 改进实验库。当前有效主方法是 B1+：失败链自适应�
 
 ## 下一步
 
-1. 已新增 B1+ 设计文档：docs/B1_PLUS_ADAPTIVE_COOLDOWN_20260807_zh.md。
+1. 已新增 B1+ v3 设计文档：docs/B1_PLUS_V3_QUARANTINE_METHOD_SPEC_20260807_zh.md。
 2. 已新增 B0/B1/B1+ 成对 batch 脚本：scripts/run_b1plus_batch.sh。
-3. 下一轮先在 open_plan_office / 3 UAV / 5 m / 180 s 压力实例上跑 5 对，再扩展到其他两图和 2/4 UAV。
-4. 主门槛：B1+ 相对 B1 的 A* 失败次数与失败链长度下降，makespan 不系统性恶化，FINISH 率不低于 B1；失败样本全部进入分母。
+3. v3 正式成对 batch：open_plan_office / 3 UAV / 5 m / 180 s，至少 5 对后扩展到其他两图和 2/4 UAV。
+4. 主门槛：B1+ v3 相对 B1 的 A* 失败次数与失败链长度下降，makespan 不系统性恶化，FINISH 率不低于 B1；失败样本全部进入分母。
 
 ## 2026-08-07 v8.1 更新
 
@@ -73,4 +73,4 @@ C2-Explorer 改进实验库。当前有效主方法是 B1+：失败链自适应�
 - 2 UAV 正式交错 batch 已完成：C3 相对 B1 成对中位差 -14.31 s，约 14.3%，但 takeover 总数仍为 0，不能归因给 peer takeover。
 - 180s 失败链压力 batch 已完成：B0 出现 1/5 实例卡死（343 次 A* 失败、2/3 完成），B1 与 C3 均为 3/3 完成；5 对实例中 takeover_sent/executed 均为 0，C3 相对 B1 成对中位差 +4.76 s，因此 peer takeover 无端到端收益。
 - 下一阶段主方法切换为 B1+：在 B1 冷却之外增加 owner-level 失败目标降权/过期失效，takeover 只作为冷却后仍持续失败的实验性后备，不再进入正式主消融。
-- B1+ 已完成第一轮 120 s 参数验证 pilot：open_plan_office/3 UAV，3/3 FINISH，B1+ 参数全部进入 ROS，遥测记录 backoff_s=5。
+- B1+ v3 已完成 120 s 参数验证 pilot：open_plan_office/3 UAV 与 2 UAV 均正常运行，quarantine_enabled=1、backoff_s=-1；2 UAV 观测到 open_set_exhausted 与隔离注册。
