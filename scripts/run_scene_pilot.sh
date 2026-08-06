@@ -9,7 +9,7 @@ source "$activation_script"
 set -u
 
 if (( $# < 1 )); then
-  echo "usage: run_scene_pilot.sh <open_plan_office|cubicle_office|octa_maze> [drone_num] [duration_s] [run_id] [communication_threshold_m] [reachability_shadow_max_candidates] [reachability_peer_shadow_max_peers] [prct_enable_retry_suppression] [prct_repeat_threshold] [prct_cooldown_s] [prct_enable_peer_takeover] [prct_peer_cert_wait_s] [prct_peer_handoff_timeout_s] [prct_peer_state_max_age_s]" >&2
+  echo "usage: run_scene_pilot.sh <open_plan_office|cubicle_office|octa_maze> [drone_num] [duration_s] [run_id] [communication_threshold_m] [reachability_shadow_max_candidates] [reachability_peer_shadow_max_peers] [prct_enable_retry_suppression] [prct_repeat_threshold] [prct_cooldown_s] [prct_enable_peer_takeover] [prct_peer_cert_wait_s] [prct_peer_handoff_timeout_s] [prct_peer_state_max_age_s] [c3_enable_marginal_gate] [c3_benefit_margin_s] [c3_trust_threshold] [c3_load_weight] [c3_handoff_overhead_s] [c3_trust_penalty_s] [c3_nominal_speed_m_s] [c3_owner_fallback_penalty_s] [c3_owner_stuck_alpha] [c3_min_repeat_count] [c3_owner_repeat_cost_s] [c3_peer_cert_grace_s] [c3_takeover_cooldown_s] [c3_max_takeover_attempts]" >&2
   exit 64
 fi
 
@@ -27,6 +27,21 @@ prct_enable_peer_takeover="${11:-false}"
 prct_peer_cert_wait_s="${12:-0.25}"
 prct_peer_handoff_timeout_s="${13:-2.0}"
 prct_peer_state_max_age_s="${14:-2.0}"
+c3_enable_marginal_gate="${15:-true}"
+c3_benefit_margin_s="${16:-1.0}"
+c3_trust_threshold="${17:-0.5}"
+c3_load_weight="${18:-0.5}"
+c3_handoff_overhead_s="${19:-0.5}"
+c3_trust_penalty_s="${20:-2.0}"
+c3_nominal_speed_m_s="${21:-2.0}"
+c3_owner_fallback_penalty_s="${22:-3.0}"
+c3_owner_stuck_alpha="${23:-1.0}"
+c3_min_repeat_count="${24:-3}"
+c3_owner_repeat_cost_s="${25:-0.3}"
+c3_peer_cert_grace_s="${26:-0.6}"
+c3_takeover_cooldown_s="${27:-30.0}"
+c3_max_takeover_attempts="${28:-3}"
+c3_takeover_completed_cooldown_s="${29:-120.0}"
 
 if ! [[ "$reachability_shadow_max_candidates" =~ ^[0-9]+$ ]]; then
   echo "reachability_shadow_max_candidates must be a non-negative integer" >&2
@@ -42,6 +57,18 @@ if [[ "$prct_enable_retry_suppression" != "true" && "$prct_enable_retry_suppress
 fi
 if ! [[ "$prct_repeat_threshold" =~ ^[1-9][0-9]*$ ]]; then
   echo "prct_repeat_threshold must be a positive integer" >&2
+  exit 64
+fi
+if ! [[ "$c3_min_repeat_count" =~ ^[1-9][0-9]*$ ]]; then
+  echo "c3_min_repeat_count must be a positive integer" >&2
+  exit 64
+fi
+if ! [[ "$c3_max_takeover_attempts" =~ ^[1-9][0-9]*$ ]]; then
+  echo "c3_max_takeover_attempts must be a positive integer" >&2
+  exit 64
+fi
+if ! [[ "$c3_takeover_completed_cooldown_s" =~ ^[0-9]+(.[0-9]+)?$ ]]; then
+  echo "c3_takeover_completed_cooldown_s must be a non-negative number" >&2
   exit 64
 fi
 if ! [[ "$prct_cooldown_s" =~ ^[0-9]+(.[0-9]+)?$ ]]; then
@@ -62,6 +89,28 @@ if ! [[ "$prct_peer_handoff_timeout_s" =~ ^[0-9]+(.[0-9]+)?$ ]]; then
 fi
 if ! [[ "$prct_peer_state_max_age_s" =~ ^[0-9]+(.[0-9]+)?$ ]]; then
   echo "prct_peer_state_max_age_s must be a non-negative number" >&2
+  exit 64
+fi
+if [[ "$c3_enable_marginal_gate" != "true" && "$c3_enable_marginal_gate" != "false" ]]; then
+  echo "c3_enable_marginal_gate must be true or false" >&2
+  exit 64
+fi
+for c3_numeric_param in "$c3_benefit_margin_s" "$c3_trust_threshold" "$c3_load_weight" "$c3_handoff_overhead_s" "$c3_trust_penalty_s" "$c3_nominal_speed_m_s" "$c3_owner_fallback_penalty_s" "$c3_owner_stuck_alpha" "$c3_owner_repeat_cost_s" "$c3_peer_cert_grace_s" "$c3_takeover_cooldown_s" "$c3_takeover_completed_cooldown_s"; do
+  if ! [[ "$c3_numeric_param" =~ ^[0-9]+(.[0-9]+)?$ ]]; then
+    echo "all c3 numeric params must be non-negative numbers: $c3_numeric_param" >&2
+    exit 64
+  fi
+done
+if ! awk -v v="$c3_trust_threshold" 'BEGIN { exit !(v >= 0.0 && v <= 1.0) }'; then
+  echo "c3_trust_threshold must be between 0.0 and 1.0" >&2
+  exit 64
+fi
+if [[ "$c3_enable_marginal_gate" == "true" && "$prct_enable_retry_suppression" == "true" ]]; then
+  echo "C3 mode requires prct_enable_retry_suppression=false; B1 suppression hides long failure chains" >&2
+  exit 64
+fi
+if [[ "$c3_enable_marginal_gate" == "true" && "$prct_enable_peer_takeover" != "true" ]]; then
+  echo "C3 mode requires prct_enable_peer_takeover=true" >&2
   exit 64
 fi
 
@@ -94,6 +143,8 @@ printf 'prct_enable_retry_suppression=%s\nprct_repeat_threshold=%s\nprct_cooldow
 printf 'prct_enable_peer_takeover=%s\nprct_peer_cert_wait_s=%s\nprct_peer_handoff_timeout_s=%s\nprct_peer_state_max_age_s=%s\n' \
   "$prct_enable_peer_takeover" "$prct_peer_cert_wait_s" "$prct_peer_handoff_timeout_s" \
   "$prct_peer_state_max_age_s" >> "$run_dir/run_manifest.txt"
+printf 'c3_enable_marginal_gate=%s\nc3_benefit_margin_s=%s\nc3_trust_threshold=%s\nc3_load_weight=%s\nc3_handoff_overhead_s=%s\nc3_trust_penalty_s=%s\nc3_nominal_speed_m_s=%s\nc3_owner_fallback_penalty_s=%s\nc3_owner_stuck_alpha=%s\n' "$c3_enable_marginal_gate" "$c3_benefit_margin_s" "$c3_trust_threshold" "$c3_load_weight" "$c3_handoff_overhead_s" "$c3_trust_penalty_s" "$c3_nominal_speed_m_s" "$c3_owner_fallback_penalty_s" "$c3_owner_stuck_alpha" >> "$run_dir/run_manifest.txt"
+printf 'c3_min_repeat_count=%s\nc3_owner_repeat_cost_s=%s\nc3_peer_cert_grace_s=%s\nc3_takeover_cooldown_s=%s\nc3_max_takeover_attempts=%s\nc3_takeover_completed_cooldown_s=%s\n' "$c3_min_repeat_count" "$c3_owner_repeat_cost_s" "$c3_peer_cert_grace_s" "$c3_takeover_cooldown_s" "$c3_max_takeover_attempts" "$c3_takeover_completed_cooldown_s" >> "$run_dir/run_manifest.txt"
 printf 'telemetry_dir=%s\n' "$ECRTA_TELEMETRY_DIR" >> "$run_dir/run_manifest.txt"
 cp "$ECRTA_WORKSPACE/src/swarm_exploration/exploration_manager/launch/$launch_file" "$run_dir/config_snapshot/"
 cp "$ECRTA_WORKSPACE/src/swarm_exploration/exploration_manager/launch/single_drone_exploration.xml" "$run_dir/config_snapshot/"
@@ -202,6 +253,8 @@ launch_args+=("prct_enable_peer_takeover:=$prct_enable_peer_takeover" \
   "prct_peer_cert_wait_s:=$prct_peer_cert_wait_s" \
   "prct_peer_handoff_timeout_s:=$prct_peer_handoff_timeout_s" \
   "prct_peer_state_max_age_s:=$prct_peer_state_max_age_s")
+launch_args+=("c3_enable_marginal_gate:=$c3_enable_marginal_gate" "c3_benefit_margin_s:=$c3_benefit_margin_s" "c3_trust_threshold:=$c3_trust_threshold" "c3_load_weight:=$c3_load_weight" "c3_handoff_overhead_s:=$c3_handoff_overhead_s" "c3_trust_penalty_s:=$c3_trust_penalty_s" "c3_nominal_speed_m_s:=$c3_nominal_speed_m_s" "c3_owner_fallback_penalty_s:=$c3_owner_fallback_penalty_s" "c3_owner_stuck_alpha:=$c3_owner_stuck_alpha")
+launch_args+=("c3_min_repeat_count:=$c3_min_repeat_count" "c3_owner_repeat_cost_s:=$c3_owner_repeat_cost_s" "c3_peer_cert_grace_s:=$c3_peer_cert_grace_s" "c3_takeover_cooldown_s:=$c3_takeover_cooldown_s" "c3_max_takeover_attempts:=$c3_max_takeover_attempts" "c3_takeover_completed_cooldown_s:=$c3_takeover_completed_cooldown_s")
 if (( reachability_shadow_max_candidates > 0 )); then
   launch_args+=("reachability_shadow_max_candidates:=$reachability_shadow_max_candidates")
 fi
@@ -210,12 +263,13 @@ if (( reachability_peer_shadow_max_peers > 0 )); then
 fi
 roslaunch exploration_manager "$launch_file" "${launch_args[@]}" > "$run_dir/roslaunch.log" 2>&1 &
 launch_pid=$!
-printf 'launch_pid=%s\nlaunch_command=roslaunch exploration_manager %s drone_num:=%s communication_threshold:=%s reachability_shadow_max_candidates:=%s reachability_peer_shadow_max_peers:=%s prct_enable_retry_suppression:=%s prct_repeat_threshold:=%s prct_cooldown_s:=%s prct_enable_peer_takeover:=%s prct_peer_cert_wait_s:=%s prct_peer_handoff_timeout_s:=%s prct_peer_state_max_age_s:=%s\n' \
+printf 'launch_pid=%s\nlaunch_command=roslaunch exploration_manager %s drone_num:=%s communication_threshold:=%s reachability_shadow_max_candidates:=%s reachability_peer_shadow_max_peers:=%s prct_enable_retry_suppression:=%s prct_repeat_threshold:=%s prct_cooldown_s:=%s prct_enable_peer_takeover:=%s prct_peer_cert_wait_s:=%s prct_peer_handoff_timeout_s:=%s prct_peer_state_max_age_s:=%s c3_max_takeover_attempts:=%s\n' \
   "$launch_pid" "$launch_file" "$drone_num" "$communication_threshold" \
   "$reachability_shadow_max_candidates" "$reachability_peer_shadow_max_peers" \
   "$prct_enable_retry_suppression" "$prct_repeat_threshold" "$prct_cooldown_s" \
   "$prct_enable_peer_takeover" "$prct_peer_cert_wait_s" "$prct_peer_handoff_timeout_s" \
-  "$prct_peer_state_max_age_s" >> "$run_dir/run_manifest.txt"
+  "$prct_peer_state_max_age_s" "$c3_max_takeover_attempts" >> "$run_dir/run_manifest.txt"
+printf 'c3_launch_args=c3_enable_marginal_gate:=%s c3_benefit_margin_s:=%s c3_trust_threshold:=%s c3_load_weight:=%s c3_handoff_overhead_s:=%s c3_trust_penalty_s:=%s c3_nominal_speed_m_s:=%s c3_owner_fallback_penalty_s:=%s c3_owner_stuck_alpha:=%s c3_min_repeat_count:=%s c3_owner_repeat_cost_s:=%s c3_peer_cert_grace_s:=%s c3_takeover_cooldown_s:=%s c3_max_takeover_attempts:=%s c3_takeover_completed_cooldown_s:=%s\n' "$c3_enable_marginal_gate" "$c3_benefit_margin_s" "$c3_trust_threshold" "$c3_load_weight" "$c3_handoff_overhead_s" "$c3_trust_penalty_s" "$c3_nominal_speed_m_s" "$c3_owner_fallback_penalty_s" "$c3_owner_stuck_alpha" "$c3_min_repeat_count" "$c3_owner_repeat_cost_s" "$c3_peer_cert_grace_s" "$c3_takeover_cooldown_s" "$c3_max_takeover_attempts" "$c3_takeover_completed_cooldown_s" >> "$run_dir/run_manifest.txt"
 
 ready=0
 for attempt in $(seq 1 30); do
@@ -282,6 +336,28 @@ printf 'prct_check_failed=%s\n' "$prct_check_failed" >> "$run_dir/run_manifest.t
 if [[ "$prct_check_failed" == 1 ]]; then
   printf 'prct_check_failed=1\n' >> "$run_dir/run_manifest.txt"
   exit 79
+fi
+c3_check_file="$run_dir/c3_check.tsv"
+printf 'param\tvalue\tmatch\n' > "$c3_check_file"
+c3_check_failed=0
+for c3_pair in "c3_enable_marginal_gate:$c3_enable_marginal_gate" "c3_benefit_margin_s:$c3_benefit_margin_s" "c3_trust_threshold:$c3_trust_threshold" "c3_load_weight:$c3_load_weight" "c3_handoff_overhead_s:$c3_handoff_overhead_s" "c3_trust_penalty_s:$c3_trust_penalty_s" "c3_nominal_speed_m_s:$c3_nominal_speed_m_s" "c3_owner_fallback_penalty_s:$c3_owner_fallback_penalty_s" "c3_owner_stuck_alpha:$c3_owner_stuck_alpha" "c3_min_repeat_count:$c3_min_repeat_count" "c3_owner_repeat_cost_s:$c3_owner_repeat_cost_s" "c3_max_takeover_attempts:$c3_max_takeover_attempts" "c3_takeover_completed_cooldown_s:$c3_takeover_completed_cooldown_s"; do
+  c3_name="${c3_pair%%:*}"
+  c3_expected="${c3_pair#*:}"
+  c3_actual=$(rosparam get "/$c3_name" 2>/dev/null | tr -d '[:space:]' || true)
+  c3_actual_norm=$(printf '%s' "$c3_actual" | tr '[:upper:]' '[:lower:]')
+  c3_match=0
+  if [[ "$c3_name" == "c3_enable_marginal_gate" ]]; then
+    [[ "$c3_actual_norm" == "true" || "$c3_actual_norm" == "1" ]] && c3_match=1
+  else
+    [[ "$c3_actual" == "$c3_expected" || "$c3_actual" == "${c3_expected}.0" || "$c3_actual_norm" == "$c3_expected" || "$c3_actual_norm" == "${c3_expected}.0" ]] && c3_match=1
+  fi
+  printf '%s\t%s\t%s\t%s\n' "$c3_name" "$c3_expected" "$c3_actual" "$c3_match" >> "$c3_check_file"
+  if [[ "$c3_match" != 1 ]]; then c3_check_failed=1; fi
+done
+printf 'c3_check_failed=%s\n' "$c3_check_failed" >> "$run_dir/run_manifest.txt"
+if [[ "$c3_check_failed" == 1 ]]; then
+  printf 'c3_check_failed=1\n' >> "$run_dir/run_manifest.txt"
+  exit 80
 fi
 
 if (( reachability_shadow_max_candidates > 0 )); then
