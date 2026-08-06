@@ -1,0 +1,16 @@
+method,instance,run_id,audit_status,run_exit,finish_count,makespan_s_proxy,astar_failure_count,astar_diagnostic_count,retry_suppression_register,retry_suppression_skip,takeover_sent,takeover_executed,takeover_received,handoff_complete,handoff_fallback,wait_duration_total_wall_s,trajectory_plan_failure_count,explore_failure_count,lkh_failure_count
+b0,1,c3formal_c3v81formal_0807_uav2_b0_open_plan_office_uav2_run_001,audit-complete,0,2,101.45301795005798,0,0,0,0,0,0,0,0,0,0.0,0,2,0
+b1,1,c3formal_c3v81formal_0807_uav2_b1_open_plan_office_uav2_run_001,audit-complete,0,2,64.45114946365356,0,0,0,0,0,0,0,0,0,0.0,0,2,0
+c3,1,c3formal_c3v81formal_0807_uav2_c3_open_plan_office_uav2_run_001,audit-complete,0,2,92.93368887901306,0,0,0,0,0,0,0,0,0,0.0,0,2,0
+b0,2,c3formal_c3v81formal_0807_uav2_b0_open_plan_office_uav2_run_002,audit-complete,0,2,70.9394850730896,0,0,0,0,0,0,0,0,0,0.0,0,2,0
+b1,2,c3formal_c3v81formal_0807_uav2_b1_open_plan_office_uav2_run_002,audit-complete,0,2,78.36861968040466,0,0,0,0,0,0,0,0,0,0.0,0,2,0
+c3,2,c3formal_c3v81formal_0807_uav2_c3_open_plan_office_uav2_run_002,audit-complete,0,2,74.06289172172546,0,0,0,0,0,0,0,0,0,0.0,0,2,0
+b0,3,c3formal_c3v81formal_0807_uav2_b0_open_plan_office_uav2_run_003,audit-complete,0,2,80.27725481987,0,0,0,0,0,0,0,0,0,0.0,0,2,0
+b1,3,c3formal_c3v81formal_0807_uav2_b1_open_plan_office_uav2_run_003,audit-complete,0,2,113.5051920413971,0,0,0,0,0,0,0,0,0,0.0,0,2,0
+c3,3,c3formal_c3v81formal_0807_uav2_c3_open_plan_office_uav2_run_003,audit-complete,0,2,81.51842498779297,1,1,1,0,0,0,0,0,0,0.0,1,2,0
+b0,4,c3formal_c3v81formal_0807_uav2_b0_open_plan_office_uav2_run_004,audit-complete,0,2,64.63499212265015,0,0,0,0,0,0,0,0,0,0.0,0,2,0
+b1,4,c3formal_c3v81formal_0807_uav2_b1_open_plan_office_uav2_run_004,audit-complete,0,2,99.969646692276,0,0,0,0,0,0,0,0,0,0.0,0,4,0
+c3,4,c3formal_c3v81formal_0807_uav2_c3_open_plan_office_uav2_run_004,audit-complete,0,2,85.65472793579102,0,0,0,0,0,0,0,0,0,0.0,0,2,0
+b0,5,c3formal_c3v81formal_0807_uav2_b0_open_plan_office_uav2_run_005,audit-complete,0,2,103.68528008460999,0,0,0,0,0,0,0,0,0,0.0,0,2,0
+b1,5,c3formal_c3v81formal_0807_uav2_b1_open_plan_office_uav2_run_005,audit-complete,0,2,126.29906344413757,0,0,0,0,0,0,0,0,0,0.0,0,2,0
+c3,5,c3formal_c3v81formal_0807_uav2_c3_open_plan_office_uav2_run_005,audit-complete,0,2,81.38022470474243,3,3,3,0,0,0,0,0,0,0.0,3,3,0

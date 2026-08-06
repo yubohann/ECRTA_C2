@@ -110,3 +110,33 @@ pilot 通过后再开新 batch_id 跑正式成对交错实验。C3 相对 B1 的
 2 UAV 配置历史上 A* 失败次数最高，正式交错 batch 已启动，用于检验 peer takeover 是否能在失败链存在时产生机制级收益。
 
 若 2 UAV 仍无 takeover 或 B3 未超过 B1，保留负结果并停止把 peer takeover 作为主贡献。
+
+## 8. 第一轮 2 UAV 正式交错 batch：open_plan_office / 2 UAV / 5 m / 120 s
+
+5 对 repeated instance 全部 FINISH，takeover_sent/executed 均为 0：
+
+| 实例 | B0(s) | B1(s) | C3(s) | C3-B1(s) |
+|---|---:|---:|---:|---:|
+| 1 | 101.45 | 64.45 | 92.93 | +28.48 |
+| 2 | 70.94 | 78.37 | 74.06 | -4.31 |
+| 3 | 80.28 | 113.51 | 81.52 | -31.99 |
+| 4 | 64.63 | 99.97 | 85.65 | -14.31 |
+| 5 | 103.69 | 126.30 | 81.38 | -44.92 |
+
+- C3 相对 B1 成对中位差为 -14.31 s，B1 中位 99.97 s，约 14.3% 改善；
+- 但 5 对 C3 仍无 takeover，因此该差值来自无种子实例的运行波动或抑制差异，不能归因于 peer takeover；
+- 无官方随机种子，repeated instance 标签不等价于论文 trial；本轮只是中间证据。
+
+原始文件：results/C3_V8_1_FORMAL_OPEN2_20260807.csv 与 .json。
+
+## 9. 180s 失败链压力 batch
+
+旧 formal 日志显示，open_plan_office / 3 UAV / 180 s 的 B0 多次出现 500-700 次 A* 失败且未 FINISH，是当前最接近“卡死-重复失败”的真实条件。
+
+180s 压力 batch 已启动，用于检验：
+
+1. C3 是否在 B0 原本无法完成的长尾条件下触发 takeover；
+2. C3 相对 B1 是否能降低未完成率或尾部 makespan；
+3. takeover 的 COMPLETED/ABORTED 回执是否闭环。
+
+若 180s 仍无 takeover 或无 B3 超过 B1 的机制级证据，保留负结果并停止把 peer takeover 作为主贡献。
