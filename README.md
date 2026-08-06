@@ -1,6 +1,6 @@
 # ECRTA_C2
 
-C2-Explorer 改进实验库。当前主方法是 C3: Trust-Gated Marginal-Cost Reallocation；ECRTA 与 PRCT B3 已作为负结果分支归档，不再进入主方法。
+C2-Explorer 改进实验库。当前有效主方法是 B1+：失败链自适应指数退避；C3/peer takeover 已进入机制级否定，不再作为主贡献。
 
 ## 当前状态
 
@@ -22,6 +22,7 @@ C2-Explorer 改进实验库。当前主方法是 C3: Trust-Gated Marginal-Cost R
 
 - B0：原始 C2。
 - B1：只增加重复 A* 失败抑制和冷却。
+- B1+：B1 冷却改为按失败链指数退避，默认 5/10/20/30 s；takeover 只作为冷却后仍失败的实验性后备。
 - B2：只读 peer 可达性证书。
 - B3：证书 + 事件触发 peer takeover。
 - C3：B2 证书框架 + trust 门控 + 边际成本接管 + takeover-completed 失效 + 无收益回退。
@@ -57,19 +58,19 @@ C2-Explorer 改进实验库。当前主方法是 C3: Trust-Gated Marginal-Cost R
 
 ## 下一步
 
-1. 机制 pilot 已通过，进入 B0/B1/C3 同一实例成对批量实验。
-2. 主门槛：C3 相对 B1 成对 makespan 中位改善 >= 10%，或未完成率改善 >= 20pp。
-3. 覆盖三图、2/3/4 UAV、5 m 通信，并补充 10/15 m 与无限通信。
-4. 统计碰撞、不可行轨迹、LKH 失败、在线时延 p50/p95；失败样本全部进入分母。
-5. 当前仓库结果只是可审计实验记录，不是论文结论。
+1. 已新增 B1+ 设计文档：docs/B1_PLUS_ADAPTIVE_COOLDOWN_20260807_zh.md。
+2. 已新增 B0/B1/B1+ 成对 batch 脚本：scripts/run_b1plus_batch.sh。
+3. 下一轮先在 open_plan_office / 3 UAV / 5 m / 180 s 压力实例上跑 5 对，再扩展到其他两图和 2/4 UAV。
+4. 主门槛：B1+ 相对 B1 的 A* 失败次数与失败链长度下降，makespan 不系统性恶化，FINISH 率不低于 B1；失败样本全部进入分母。
 
 ## 2026-08-07 v8.1 更新
 
 - C3 v8.1 将 B1 重复 A* 失败抑制作为保底层，只有同时满足 trust gate 和 marginal-cost gate 时才进入 peer takeover。
 - 已修复 C3 正式 batch 中 suppress=false 的配置错误；C3 现在与 B1 一样使用 prct_enable_retry_suppression=true。
 - 4 个 C3 v8.1 pilot 全部 FINISH；有失败链的实例同时出现 retry suppression 与 takeover COMPLETED invalidate，无失败链实例不会强行 takeover。
-- 5 对 B0/B1/C3 正式交错 batch 正在运行；在完成多次成对统计前，所有结果都只是中间证据，C3 尚未通过投稿门槛。
+- 5 对 B0/B1/C3 正式交错 batch 已完成；详细结果见 C3_V8_1_TRUST_GATED_WITH_B1_SUPPRESSION_20260807_zh.md。
 - 5 对 B0/B1/C3 正式交错 batch 已完成：C3 相对 B1 成对中位差 -7.56 s（约 8.9%），低于 10% 预注册门槛；5 对中 takeover 触发次数为 0，因此本轮收益不能归因于 peer takeover。
-- 2 UAV 失败链压力测试 batch 正在运行；在完成多次成对统计前，所有结果都只是中间证据，C3 尚未通过投稿门槛。
 - 2 UAV 正式交错 batch 已完成：C3 相对 B1 成对中位差 -14.31 s，约 14.3%，但 takeover 总数仍为 0，不能归因给 peer takeover。
-- 180s 失败链压力 batch 正在运行，专门复现旧日志中 500-700 次 A* 失败的未完成条件；在完成机制级统计前，C3 尚未通过投稿门槛。
+- 180s 失败链压力 batch 已完成：B0 出现 1/5 实例卡死（343 次 A* 失败、2/3 完成），B1 与 C3 均为 3/3 完成；5 对实例中 takeover_sent/executed 均为 0，C3 相对 B1 成对中位差 +4.76 s，因此 peer takeover 无端到端收益。
+- 下一阶段主方法切换为 B1+：在 B1 冷却之外增加 owner-level 失败目标降权/过期失效，takeover 只作为冷却后仍持续失败的实验性后备，不再进入正式主消融。
+- B1+ 已完成第一轮 120 s 参数验证 pilot：open_plan_office/3 UAV，3/3 FINISH，B1+ 参数全部进入 ROS，遥测记录 backoff_s=5。

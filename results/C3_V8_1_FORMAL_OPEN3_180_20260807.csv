@@ -1,0 +1,16 @@
+method,instance,run_id,audit_status,run_exit,finish_count,makespan_s_proxy,astar_failure_count,astar_diagnostic_count,retry_suppression_register,retry_suppression_skip,takeover_sent,takeover_executed,takeover_received,handoff_complete,handoff_fallback,wait_duration_total_wall_s,trajectory_plan_failure_count,explore_failure_count,lkh_failure_count
+b0,1,c3formal_c3v81stress_0807_open3_180_b0_open_plan_office_uav3_run_001,audit-complete,0,3,99.773277759552,4,4,0,0,0,0,0,0,0,0.0,4,6,0
+b1,1,c3formal_c3v81stress_0807_open3_180_b1_open_plan_office_uav3_run_001,audit-complete,0,3,108.14798951148987,1,1,1,0,0,0,0,0,0,0.0,2,6,0
+c3,1,c3formal_c3v81stress_0807_open3_180_c3_open_plan_office_uav3_run_001,audit-complete,0,3,83.31478190422058,0,0,0,0,0,0,0,0,0,0.0,0,4,0
+b0,2,c3formal_c3v81stress_0807_open3_180_b0_open_plan_office_uav3_run_002,audit-complete,0,3,83.21708846092224,1,1,0,0,0,0,0,0,0,0.0,1,4,0
+b1,2,c3formal_c3v81stress_0807_open3_180_b1_open_plan_office_uav3_run_002,audit-complete,0,3,72.93773341178894,3,3,3,2,0,0,0,0,0,0.0,3,6,0
+c3,2,c3formal_c3v81stress_0807_open3_180_c3_open_plan_office_uav3_run_002,audit-complete,0,3,65.60443997383118,0,0,0,0,0,0,0,0,0,0.0,0,3,0
+b0,3,c3formal_c3v81stress_0807_open3_180_b0_open_plan_office_uav3_run_003,audit-complete,0,3,109.50817394256592,2,2,0,0,0,0,0,0,0,0.0,2,5,0
+b1,3,c3formal_c3v81stress_0807_open3_180_b1_open_plan_office_uav3_run_003,audit-complete,0,3,66.81743121147156,2,2,2,0,0,0,0,0,0,0.0,2,5,0
+c3,3,c3formal_c3v81stress_0807_open3_180_c3_open_plan_office_uav3_run_003,audit-complete,0,3,82.19980430603027,3,3,3,0,0,0,0,0,1,0.6672420501708984,3,7,0
+b0,4,c3formal_c3v81stress_0807_open3_180_b0_open_plan_office_uav3_run_004,audit-complete,0,2,70.91338014602661,343,343,0,0,0,0,0,0,0,0.0,343,345,0
+b1,4,c3formal_c3v81stress_0807_open3_180_b1_open_plan_office_uav3_run_004,audit-complete,0,3,63.94588565826416,3,3,3,4,0,0,0,0,0,0.0,3,8,0
+c3,4,c3formal_c3v81stress_0807_open3_180_c3_open_plan_office_uav3_run_004,audit-complete,0,3,74.97866773605347,0,0,0,0,0,0,0,0,0,0.0,0,3,0
+b0,5,c3formal_c3v81stress_0807_open3_180_b0_open_plan_office_uav3_run_005,audit-complete,0,3,74.95630979537964,1,1,0,0,0,0,0,0,0,0.0,1,4,0
+b1,5,c3formal_c3v81stress_0807_open3_180_b1_open_plan_office_uav3_run_005,audit-complete,0,3,71.9415283203125,3,3,3,2,0,0,0,0,0,0.0,3,6,0
+c3,5,c3formal_c3v81stress_0807_open3_180_c3_open_plan_office_uav3_run_005,audit-complete,0,3,76.69916653633118,3,3,3,1,0,0,0,0,1,0.4962160587310791,3,7,0

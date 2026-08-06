@@ -42,6 +42,9 @@ c3_peer_cert_grace_s="${26:-0.6}"
 c3_takeover_cooldown_s="${27:-30.0}"
 c3_max_takeover_attempts="${28:-3}"
 c3_takeover_completed_cooldown_s="${29:-120.0}"
+prct_backoff_initial_s="${30:-5.0}"
+prct_backoff_max_s="${31:-30.0}"
+prct_backoff_factor="${32:-2.0}"
 
 if ! [[ "$reachability_shadow_max_candidates" =~ ^[0-9]+$ ]]; then
   echo "reachability_shadow_max_candidates must be a non-negative integer" >&2
@@ -69,6 +72,16 @@ if ! [[ "$c3_max_takeover_attempts" =~ ^[1-9][0-9]*$ ]]; then
 fi
 if ! [[ "$prct_cooldown_s" =~ ^[0-9]+(.[0-9]+)?$ ]]; then
   echo "prct_cooldown_s must be a non-negative number" >&2
+  exit 64
+fi
+for prct_backoff_param in "$prct_backoff_initial_s" "$prct_backoff_max_s" "$prct_backoff_factor"; do
+  if ! [[ "$prct_backoff_param" =~ ^[0-9]+(.[0-9]+)?$ ]]; then
+    echo "prct_backoff parameters must be non-negative numbers" >&2
+    exit 64
+  fi
+done
+if ! awk -v v="$prct_backoff_factor" 'BEGIN { exit !(v > 0.0) }'; then
+  echo "prct_backoff_factor must be greater than 0" >&2
   exit 64
 fi
 if [[ "$prct_enable_peer_takeover" != "true" && "$prct_enable_peer_takeover" != "false" ]]; then
@@ -136,6 +149,8 @@ printf 'reachability_shadow_max_candidates=%s\n' "$reachability_shadow_max_candi
 printf 'reachability_peer_shadow_max_peers=%s\n' "$reachability_peer_shadow_max_peers" >> "$run_dir/run_manifest.txt"
 printf 'prct_enable_retry_suppression=%s\nprct_repeat_threshold=%s\nprct_cooldown_s=%s\n' \
   "$prct_enable_retry_suppression" "$prct_repeat_threshold" "$prct_cooldown_s" >> "$run_dir/run_manifest.txt"
+printf 'prct_backoff_initial_s=%s\nprct_backoff_max_s=%s\nprct_backoff_factor=%s\n' \
+  "$prct_backoff_initial_s" "$prct_backoff_max_s" "$prct_backoff_factor" >> "$run_dir/run_manifest.txt"
 printf 'prct_enable_peer_takeover=%s\nprct_peer_cert_wait_s=%s\nprct_peer_handoff_timeout_s=%s\nprct_peer_state_max_age_s=%s\n' \
   "$prct_enable_peer_takeover" "$prct_peer_cert_wait_s" "$prct_peer_handoff_timeout_s" \
   "$prct_peer_state_max_age_s" >> "$run_dir/run_manifest.txt"
@@ -245,6 +260,8 @@ trap cleanup EXIT INT TERM
 launch_args=("drone_num:=$drone_num" "communication_threshold:=$communication_threshold")
 launch_args+=("prct_enable_retry_suppression:=$prct_enable_retry_suppression" \
   "prct_repeat_threshold:=$prct_repeat_threshold" "prct_cooldown_s:=$prct_cooldown_s")
+launch_args+=("prct_backoff_initial_s:=$prct_backoff_initial_s" \
+  "prct_backoff_max_s:=$prct_backoff_max_s" "prct_backoff_factor:=$prct_backoff_factor")
 launch_args+=("prct_enable_peer_takeover:=$prct_enable_peer_takeover" \
   "prct_peer_cert_wait_s:=$prct_peer_cert_wait_s" \
   "prct_peer_handoff_timeout_s:=$prct_peer_handoff_timeout_s" \
@@ -316,6 +333,9 @@ prct_check_failed=0
 for prct_pair in "prct_enable_retry_suppression:$prct_enable_retry_suppression" \
                  "prct_repeat_threshold:$prct_repeat_threshold" \
                  "prct_cooldown_s:$prct_cooldown_s" \
+                 "prct_backoff_initial_s:$prct_backoff_initial_s" \
+                 "prct_backoff_max_s:$prct_backoff_max_s" \
+                 "prct_backoff_factor:$prct_backoff_factor" \
                  "prct_enable_peer_takeover:$prct_enable_peer_takeover" \
                  "prct_peer_cert_wait_s:$prct_peer_cert_wait_s" \
                  "prct_peer_handoff_timeout_s:$prct_peer_handoff_timeout_s" \
