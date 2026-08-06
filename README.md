@@ -62,3 +62,12 @@ C2-Explorer 改进实验库。当前主方法是 C3: Trust-Gated Marginal-Cost R
 3. 覆盖三图、2/3/4 UAV、5 m 通信，并补充 10/15 m 与无限通信。
 4. 统计碰撞、不可行轨迹、LKH 失败、在线时延 p50/p95；失败样本全部进入分母。
 5. 当前仓库结果只是可审计实验记录，不是论文结论。
+
+## 2026-08-07 v8.1 更新
+
+- C3 v8.1 将 B1 重复 A* 失败抑制作为保底层，只有同时满足 trust gate 和 marginal-cost gate 时才进入 peer takeover。
+- 已修复 C3 正式 batch 中 suppress=false 的配置错误；C3 现在与 B1 一样使用 prct_enable_retry_suppression=true。
+- 4 个 C3 v8.1 pilot 全部 FINISH；有失败链的实例同时出现 retry suppression 与 takeover COMPLETED invalidate，无失败链实例不会强行 takeover。
+- 5 对 B0/B1/C3 正式交错 batch 正在运行；在完成多次成对统计前，所有结果都只是中间证据，C3 尚未通过投稿门槛。
+- 5 对 B0/B1/C3 正式交错 batch 已完成：C3 相对 B1 成对中位差 -7.56 s（约 8.9%），低于 10% 预注册门槛；5 对中 takeover 触发次数为 0，因此本轮收益不能归因于 peer takeover。
+- 2 UAV 失败链压力测试 batch 正在运行；在完成多次成对统计前，所有结果都只是中间证据，C3 尚未通过投稿门槛。

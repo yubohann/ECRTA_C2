@@ -85,3 +85,28 @@ pilot 通过后再开新 batch_id 跑正式成对交错实验。C3 相对 B1 的
 说明：实例标签不是官方随机种子；这些 pilot 只验证机制闭环，不能与 B1 做论文级成对比较。001 证明重复失败抑制和 takeover COMPLETED invalidate 可以同时工作，002/003/004 证明失败链少时 takeover 不强行触发。
 
 下一步：正式成对 batch 使用 instance-major 交错顺序 B0/B1/C3，再统计成对 makespan、FINISH 率、A* 失败、takeover、碰撞、LKH 和在线时延。
+
+## 6. 第一轮正式交错 batch：open_plan_office / 3 UAV / 5 m / 120 s
+
+5 对 repeated instance 全部 FINISH，无碰撞、无 LKH 失败、无 takeover 等待：
+
+| 实例 | B0(s) | B1(s) | C3(s) | C3-B1(s) |
+|---|---:|---:|---:|---:|
+| 1 | 69.36 | 99.15 | 78.01 | -21.14 |
+| 2 | 96.59 | 85.32 | 77.76 | -7.56 |
+| 3 | 76.77 | 86.65 | 73.95 | -12.70 |
+| 4 | 81.08 | 64.70 | 69.27 | +4.58 |
+| 5 | 61.68 | 74.09 | 81.29 | +7.20 |
+
+- C3 相对 B1 成对中位差为 -7.56 s，B1 中位 85.32 s，约 8.9% 改善，未达到预注册的 10% 门槛；
+- 5 对 C3 的 takeover_sent/executed 均为 0，只有 retry suppression 生效，因此本轮收益不能归因于 peer takeover；
+- C3 相对 B1 的均值差为 -5.92 s，相对 B0 的成对中位差为 -2.82 s；
+- 无官方随机种子，repeated instance 标签不等价于论文 trial；本轮只是中间证据。
+
+原始文件：results/C3_V8_1_FORMAL_OPEN3_20260807.csv 与 .json。
+
+## 7. 下一步：2 UAV 失败链压力测试
+
+2 UAV 配置历史上 A* 失败次数最高，正式交错 batch 已启动，用于检验 peer takeover 是否能在失败链存在时产生机制级收益。
+
+若 2 UAV 仍无 takeover 或 B3 未超过 B1，保留负结果并停止把 peer takeover 作为主贡献。
