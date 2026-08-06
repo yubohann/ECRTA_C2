@@ -7,7 +7,7 @@ C2-Explorer 改进实验库。当前主方法是 C3: Trust-Gated Marginal-Cost R
 - C3 v8 已实现并编译通过：证书、回执、trust、边际成本门控、takeover-completed invalidation。
 - v8 修复 v7 根因：owner 收到 COMPLETED 后不再反复攻击同一 frontier；默认 `c3_takeover_completed_cooldown_s=120.0`。
 - 已修复 `registerPrctFailure` 遥测 JSON 未闭合问题。
-- C3 v8 机制 pilot：open_plan_office/3 UAV/5 m 实例 c3_open3_v8_001，3/3 FINISH，takeover exhausted 0。
+- C3 v8 机制 pilot：open_plan_office/3 UAV/5 m 实例 007/008/009 均已 audit-complete；007/008 出现 takeover COMPLETED 后 completed-invalidate 1 次且 exhausted 0。
 - 正式端到端收益尚未验证，pilot 不能作为论文结论。
 - 仓库不包含 C2 上游源码、地图、rosbag 和大日志，只保存方法、协议、脚本和聚合结果。
 
@@ -40,9 +40,11 @@ C2-Explorer 改进实验库。当前主方法是 C3: Trust-Gated Marginal-Cost R
 
 ## v8 pilot
 
-| 实例 | 场景 | UAV | FINISH | A*失败 | takeover | exhausted | makespan proxy(s) |
-|---|---|---:|---:|---:|---:|---:|---:|
-| c3_open3_v8_001 | open_plan_office | 3 | 3/3 | 11 | 1 sent/1 completed | 0 | 78.90 |
+| 实例 | 场景 | UAV | FINISH | A*失败 | takeover | completed invalidate | exhausted | makespan proxy(s) | 审计 |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---|
+| c3_open3_v8_007 | open_plan_office | 3 | 3/3 | 11 | 1 sent/1 executed/1 completed | 1 | 0 | 64.75 | audit-complete |
+| c3_open3_v8_008 | open_plan_office | 3 | 3/3 | 11 | 1 sent/1 executed/1 completed | 1 | 0 | 85.44 | audit-complete |
+| c3_open3_v8_009 | open_plan_office | 3 | 3/3 | 4 | 0 | 0 | 0 | 77.44 | audit-complete |
 
 ## 门槛判断
 
@@ -55,7 +57,8 @@ C2-Explorer 改进实验库。当前主方法是 C3: Trust-Gated Marginal-Cost R
 
 ## 下一步
 
-1. 完成至少 4 个 open_plan_office/3 UAV/5 m v8 pilot。
-2. 检查 takeover completed 后是否稳定跳转、exhausted 是否保持低位。
-3. 通过后再进入 B0/B1/C3 成对批量实验。
-4. 当前仓库结果只是可审计实验记录，不是论文结论。
+1. 机制 pilot 已通过，进入 B0/B1/C3 同一实例成对批量实验。
+2. 主门槛：C3 相对 B1 成对 makespan 中位改善 >= 10%，或未完成率改善 >= 20pp。
+3. 覆盖三图、2/3/4 UAV、5 m 通信，并补充 10/15 m 与无限通信。
+4. 统计碰撞、不可行轨迹、LKH 失败、在线时延 p50/p95；失败样本全部进入分母。
+5. 当前仓库结果只是可审计实验记录，不是论文结论。
