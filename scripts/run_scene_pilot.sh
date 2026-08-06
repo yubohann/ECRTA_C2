@@ -347,7 +347,11 @@ for c3_pair in "c3_enable_marginal_gate:$c3_enable_marginal_gate" "c3_benefit_ma
   c3_actual_norm=$(printf '%s' "$c3_actual" | tr '[:upper:]' '[:lower:]')
   c3_match=0
   if [[ "$c3_name" == "c3_enable_marginal_gate" ]]; then
-    [[ "$c3_actual_norm" == "true" || "$c3_actual_norm" == "1" ]] && c3_match=1
+    if [[ "$c3_expected" == "true" ]]; then
+      [[ "$c3_actual_norm" == "true" || "$c3_actual_norm" == "1" ]] && c3_match=1
+    else
+      [[ "$c3_actual_norm" == "false" || "$c3_actual_norm" == "0" ]] && c3_match=1
+    fi
   else
     [[ "$c3_actual" == "$c3_expected" || "$c3_actual" == "${c3_expected}.0" || "$c3_actual_norm" == "$c3_expected" || "$c3_actual_norm" == "${c3_expected}.0" ]] && c3_match=1
   fi
