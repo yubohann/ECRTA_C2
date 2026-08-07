@@ -5,11 +5,11 @@ C2-Explorer 改进实验库。当前不在主方法中使用 peer takeover、执
 ## 当前状态
 
 - 三方法并行方案已定稿并实现：REACH-C2、SVR-C2、STEER-C2。
-- 方法说明见 `docs/THREE_METHODS_PARALLEL_OVERVIEW_20260808_zh.md`。
+- 方法说明见 `docs/THREE_METHODS_PARALLEL_OVERVIEW_20260807_zh.md`。
 - 方法工作副本：`/home/c2dev/c2_explorer_reproduction/workspace/reachability_retry_c2_method`。
 - 统一 `method_mode=baseline|suppress|reach|svr|steer`，launch 参数和遥测文件已接上。
 - 已完成第一轮机制 pilot，确认代码能启动、能输出 `failures.jsonl / method_events.jsonl / command_events.jsonl / task_events.jsonl`。
-- 当前正在跑高失败格子：`open_plan_office / 3 UAV / 5 m / 180 s` 全时长成对 batch。
+- 当前协议已固定 `LKH_SEED`；下一步先用固定 seed 搜索可复现高失败 B0 实例，再成对运行 B0/B1/REACH/SVR/STEER。
 
 ## 固定边界
 
@@ -34,13 +34,16 @@ C2-Explorer 改进实验库。当前不在主方法中使用 peer takeover、执
 
 ## 当前脚本
 
-- `scripts/run_scene_pilot.sh`：单实例运行器，支持 `METHOD_MODE`、方法参数和 `PRCT_RUN_FULL_DURATION`。
-- `scripts/run_three_method_batch.sh`：B0/B1/REACH/SVR/STEER 成对 batch 运行器。
-- `scripts/analyze_telemetry.py`、`scripts/audit_peer_handoff_active.py`：遥测聚合与审计。
+- `scripts/run_scene_pilot.sh`：单实例运行器，支持 `METHOD_MODE`、`LKH_SEED`、方法参数和 `PRCT_RUN_FULL_DURATION`。
+- `scripts/run_three_method_batch.sh`：B0/B1/REACH/SVR/STEER 成对 batch 运行器，支持 `LKH_SEED`。
+- 当前协议固定 `LKH_SEED`；所有成对运行必须使用同一 `lkh_seed`，未记录 seed 的旧日志不参与公平比较。
+- `scripts/search_b0_fixed_seed.sh`：逐固定 seed 搜索高失败 B0 实例，不产生方法收益结论。
+ - `scripts/analyze_telemetry.py`：正式遥测聚合；`scripts/audit_peer_handoff_active.py` 仅保留给历史 peer 日志审计，不参与新协议。
+ - `scripts/verify_three_method_gate.sh`：新协议硬门禁检查，确保旧 peer/C3 开关不进入 B0/B1/REACH/SVR/STEER 启动链。
 
 ## 下一步
-
-1. 完成高失败格子的三方法机制 pilot。
-2. 若 STEER 能打断同一目标重复失败链，检查是否来自真实视角轮换而非“少跑 A*”。
+1. 使用固定 `LKH_SEED` 搜索可复现高失败 B0 实例。
+2. 在同一固定 seed 上完成 B0/B1/REACH/SVR/STEER 机制 pilot。
 3. 若 REACH/SVR 没有触发，先找失败率更高的实例或扰动条件，不能把无失败实例写成收益。
 4. 统计成对 batch，所有失败/超时样本保留，不删除、不挑种子、不放宽阈值。
+ 5. 每次批量前运行 `scripts/verify_three_method_gate.sh`，并保留 `method_check.tsv`。

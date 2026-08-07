@@ -1,6 +1,6 @@
-﻿# THREE_METHODS_PARALLEL_OVERVIEW
+# THREE_METHODS_PARALLEL_OVERVIEW
 
-日期：2026-08-08
+日期：2026-08-07
 状态：并行实现与对比的总入口，不是投稿结论。
 
 ## 1. 三方法一句话
@@ -27,7 +27,15 @@
 - `svr`：SVR-C2；
 - `steer`：STEER-C2。
 
-每个方法保留独立开关，但 batch runner 只接受 method_mode，不散落拼装 PRCT/C3 参数。
+新协议入口只接受 `METHOD_MODE=baseline|suppress|reach|svr|steer`；旧 PRCT/C3 参数仅保留为 false 校验，不允许参与决策。
+
+### LKH 可复现性
+
+原始 C2 的 LKH 配置使用 SEED=0，LKH 会从系统时钟取随机种子，导致同一场景、同一初始位置下每次分配不同。当前源码已将 4 处 LKH SEED 写入改为 lkh_seed_，scene/planner launch 与 runner 均贯通 LKH_SEED。正式实验必须固定 lkh_seed，并且每个 instance 标签同时包含 lkh_seed；没有 lkh_seed 的旧日志不能作为成对基线。
+
+runner 启动后会把 /lkh_seed 写入参数服务器并校验，只有校验通过才触发任务。peer takeover 与 C3 marginal gate 在当前 method_mode 协议中被硬性关闭，确保历史代码不会参与。
+
+三方法参数 `reach_risk_weight`、`reach_risk_penalty`、`steer_goal_min_hold_s`、`steer_switch_margin`、`steer_load_bias`、`svr_reallocation_cost_m`、`svr_solver_cost_s` 同时从全局参数服务器读取；runner 新增 `method_check.tsv`，启动前校验 method_mode 与方法参数是否真实生效。批量前运行 `scripts/verify_three_method_gate.sh`。
 
 ## 4. 统一事件 schema
 
@@ -41,6 +49,8 @@
 现有 telemetry_drone_*.jsonl 保留，不删除。
 
 ## 5. 成对实验顺序
+
+可参考 `docs/LITERATURE_EXPERIMENT_DESIGN_20260807_zh.md` 中整理的近两年网上工作，用来校准实验矩阵，但不以摘要替代本地机制审计。
 
 1. B0/B1 pilot 于高失败格子，确认事件可捕获；
 2. REACH/SVR/STEER 各自单实例 pilot，确认不破坏启动和 FINISH；

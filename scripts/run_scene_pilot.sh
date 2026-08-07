@@ -27,7 +27,7 @@ prct_enable_peer_takeover="${11:-false}"
 prct_peer_cert_wait_s="${12:-0.25}"
 prct_peer_handoff_timeout_s="${13:-2.0}"
 prct_peer_state_max_age_s="${14:-2.0}"
-c3_enable_marginal_gate="${15:-true}"
+c3_enable_marginal_gate="${15:-false}"
 c3_benefit_margin_s="${16:-1.0}"
 c3_trust_threshold="${17:-0.5}"
 c3_load_weight="${18:-0.5}"
@@ -58,17 +58,26 @@ steer_load_bias="${STEER_LOAD_BIAS:-0.1}"
 svr_reallocation_cost_m="${SVR_REALLOCATION_COST_M:-2.0}"
 svr_solver_cost_s="${SVR_SOLVER_COST_S:-0.5}"
 run_full_duration="${PRCT_RUN_FULL_DURATION:-false}"
+lkh_seed="${LKH_SEED:-1}"
 
 case "$method_mode" in
   baseline|suppress|reach|svr|steer) ;;
   *) echo "METHOD_MODE must be baseline|suppress|reach|svr|steer" >&2; exit 64 ;;
 esac
+if [[ "$prct_enable_peer_takeover" == "true" || "$c3_enable_marginal_gate" == "true" ]]; then
+  echo "peer takeover and C3 marginal gate are disabled in the three-method protocol" >&2
+  exit 64
+fi
 for method_numeric in "$reach_risk_weight" "$reach_risk_penalty" "$steer_goal_min_hold_s" "$steer_switch_margin" "$steer_load_bias" "$svr_reallocation_cost_m" "$svr_solver_cost_s"; do
   if ! [[ "$method_numeric" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
     echo "method numeric params must be non-negative numbers" >&2
     exit 64
   fi
 done
+if ! [[ "$lkh_seed" =~ ^[1-9][0-9]*$ ]]; then
+  echo "LKH_SEED must be a positive integer" >&2
+  exit 64
+fi
 
 if ! [[ "$reachability_shadow_max_candidates" =~ ^[0-9]+$ ]]; then
   echo "reachability_shadow_max_candidates must be a non-negative integer" >&2
@@ -195,6 +204,7 @@ printf 'prct_backoff_initial_s=%s\nprct_backoff_max_s=%s\nprct_backoff_factor=%s
 printf 'prct_local_evidence_radius_m=%s\n' "$prct_local_evidence_radius_m" >> "$run_dir/run_manifest.txt"
 printf 'prct_evict_on_first_failure=%s\n' "$prct_evict_on_first_failure" >> "$run_dir/run_manifest.txt"
 printf 'prct_eviction_max_extra_cost=%s\n' "$prct_eviction_max_extra_cost" >> "$run_dir/run_manifest.txt"
+printf 'lkh_seed=%s\n' "$lkh_seed" >> "$run_dir/run_manifest.txt"
 printf 'method_mode=%s\nreach_risk_weight=%s\nreach_risk_penalty=%s\nsteer_goal_min_hold_s=%s\nsteer_switch_margin=%s\nsteer_load_bias=%s\nsvr_reallocation_cost_m=%s\nsvr_solver_cost_s=%s\n' \
   "$method_mode" "$reach_risk_weight" "$reach_risk_penalty" "$steer_goal_min_hold_s" "$steer_switch_margin" "$steer_load_bias" "$svr_reallocation_cost_m" "$svr_solver_cost_s" >> "$run_dir/run_manifest.txt"
 printf 'prct_enable_peer_takeover=%s\nprct_peer_cert_wait_s=%s\nprct_peer_handoff_timeout_s=%s\nprct_peer_state_max_age_s=%s\n' \
@@ -315,6 +325,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 launch_args=("drone_num:=$drone_num" "communication_threshold:=$communication_threshold")
+launch_args+=("lkh_seed:=$lkh_seed")
 launch_args+=("prct_enable_retry_suppression:=$prct_enable_retry_suppression" \
   "prct_repeat_threshold:=$prct_repeat_threshold" "prct_cooldown_s:=$prct_cooldown_s")
 launch_args+=("prct_backoff_initial_s:=$prct_backoff_initial_s" \
@@ -342,8 +353,8 @@ fi
 cleanup_stale_ros
 roslaunch exploration_manager "$launch_file" "${launch_args[@]}" > "$run_dir/roslaunch.log" 2>&1 &
 launch_pid=$!
-printf 'launch_pid=%s\nlaunch_command=roslaunch exploration_manager %s drone_num:=%s communication_threshold:=%s reachability_shadow_max_candidates:=%s reachability_peer_shadow_max_peers:=%s prct_enable_retry_suppression:=%s prct_backoff_enabled:=%s prct_repeat_threshold:=%s prct_cooldown_s:=%s prct_enable_peer_takeover:=%s prct_peer_cert_wait_s:=%s prct_peer_handoff_timeout_s:=%s prct_peer_state_max_age_s:=%s\n' \
-  "$launch_pid" "$launch_file" "$drone_num" "$communication_threshold" \
+printf 'launch_pid=%s\nlaunch_command=roslaunch exploration_manager %s drone_num:=%s lkh_seed:=%s communication_threshold:=%s reachability_shadow_max_candidates:=%s reachability_peer_shadow_max_peers:=%s prct_enable_retry_suppression:=%s prct_backoff_enabled:=%s prct_repeat_threshold:=%s prct_cooldown_s:=%s prct_enable_peer_takeover:=%s prct_peer_cert_wait_s:=%s prct_peer_handoff_timeout_s:=%s prct_peer_state_max_age_s:=%s\n' \
+  "$launch_pid" "$launch_file" "$drone_num" "$lkh_seed" "$communication_threshold" \
   "$reachability_shadow_max_candidates" "$reachability_peer_shadow_max_peers" \
   "$prct_enable_retry_suppression" "$prct_backoff_enabled" "$prct_repeat_threshold" "$prct_cooldown_s" \
   "$prct_enable_peer_takeover" "$prct_peer_cert_wait_s" "$prct_peer_handoff_timeout_s" \
@@ -400,6 +411,7 @@ for prct_pair in "prct_enable_retry_suppression:$prct_enable_retry_suppression" 
                  "prct_backoff_enabled:$prct_backoff_enabled" \
                  "prct_repeat_threshold:$prct_repeat_threshold" \
                  "prct_cooldown_s:$prct_cooldown_s" \
+                 "lkh_seed:$lkh_seed" \
                  "prct_backoff_initial_s:$prct_backoff_initial_s" \
                  "prct_backoff_max_s:$prct_backoff_max_s" \
                  "prct_backoff_factor:$prct_backoff_factor" \
@@ -448,6 +460,37 @@ printf 'c3_check_failed=%s\n' "$c3_check_failed" >> "$run_dir/run_manifest.txt"
 if [[ "$c3_check_failed" == 1 ]]; then
   printf 'c3_check_failed=1\n' >> "$run_dir/run_manifest.txt"
   exit 80
+fi
+
+method_check_file="$run_dir/method_check.tsv"
+printf 'param\tvalue\tmatch\n' > "$method_check_file"
+method_check_failed=0
+for method_pair in \
+  "method_mode:$method_mode" \
+  "reach_risk_weight:$reach_risk_weight" \
+  "reach_risk_penalty:$reach_risk_penalty" \
+  "steer_goal_min_hold_s:$steer_goal_min_hold_s" \
+  "steer_switch_margin:$steer_switch_margin" \
+  "steer_load_bias:$steer_load_bias" \
+  "svr_reallocation_cost_m:$svr_reallocation_cost_m" \
+  "svr_solver_cost_s:$svr_solver_cost_s"; do
+  method_name="${method_pair%%:*}"
+  method_expected="${method_pair#*:}"
+  method_actual=$(rosparam get "/$method_name" 2>/dev/null | tr -d '[:space:]' || true)
+  method_match=0
+  if [[ "$method_actual" == "$method_expected" || \
+        "$method_actual" == "${method_expected}.0" || \
+        "$method_actual" == "${method_expected}.000000" ]]; then
+    method_match=1
+  fi
+  printf '%s\t%s\t%s\t%s\n' "$method_name" "$method_expected" \
+    "$method_actual" "$method_match" >> "$method_check_file"
+  if [[ "$method_match" != 1 ]]; then method_check_failed=1; fi
+done
+printf 'method_check_failed=%s\n' "$method_check_failed" >> "$run_dir/run_manifest.txt"
+if [[ "$method_check_failed" == 1 ]]; then
+  printf 'method_check_failed=1\n' >> "$run_dir/run_manifest.txt"
+  exit 81
 fi
 
 if (( reachability_shadow_max_candidates > 0 )); then
@@ -552,6 +595,5 @@ date -Is > "$run_dir/end_time.txt"
 printf 'pilot_completed=1\n' >> "$run_dir/run_manifest.txt"
 if [[ -d "$run_dir" ]]; then
   /usr/bin/python3 "$ECRTA_ROOT/scripts/analyze_telemetry.py" "$run_dir" --out "$run_dir/telemetry_summary.json" || true
-  /usr/bin/python3 "$ECRTA_ROOT/scripts/audit_peer_handoff_active.py" --run-dir "$run_dir" --out "$run_dir/peer_takeover_audit.json" || true
 fi
 printf 'run_dir=%s\n' "$run_dir"

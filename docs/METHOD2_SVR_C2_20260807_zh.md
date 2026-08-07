@@ -1,7 +1,10 @@
-﻿# METHOD2: SVR-C2
+# METHOD2: SVR-C2
 
-日期：2026-08-08
+日期：2026-08-07
 状态：三方法并行方案的 Method 2，先做机制审计和成对实验，不构成投稿结论。
+Current formal runner method set: B0/B1/REACH/SVR/STEER; B2/B3 in this doc are internal ablation targets, not separate current runners.
+
+复现协议更新：原始 C2 的 LKH SEED=0 会取系统时间，导致同一实例每次分配不稳定。当前 runner 已增加固定 LKH_SEED，所有 B0/B1/REACH/SVR/STEER 必须在同一 lkh_seed 下成对运行；未记录 lkh_seed 的旧日志不参与公平比较。
 
 ## 1. 一句话主张
 
