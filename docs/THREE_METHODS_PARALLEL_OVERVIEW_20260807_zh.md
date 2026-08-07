@@ -102,3 +102,5 @@ runner 启动后会把 /lkh_seed 写入参数服务器并校验，只有校验�
 - 新增方法参数：`reach_center_match_radius_m`（默认 5.0）、`svr_reuse_match_radius_m`（默认 5.0）。
 - `candidate_seed2_pilot_v3` 正在同一高失败实例上运行；该 pilot 只验证机制是否真正触发，不替代正式成对统计。
 - 结果出来后更新 `ALL_METHODS_RANKING.md`，并据此决定下一轮同时优化哪些方法。
+- `candidate_seed2_pilot_v3` 正在同一高失败实例上运行；该 pilot 只验证机制是否真正触发，不替代正式成对统计。
+- 首次 `candidate_seed2_pilot_v3` 因新参数未接入 launch XML 而 method_check 失败，日志已保留；修正三场景 launch 后以 `candidate_seed2_pilot_v3b` 重跑，机制验证前不进入正式统计。

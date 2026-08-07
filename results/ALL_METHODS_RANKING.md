@@ -40,3 +40,5 @@
 - 当前状态：`candidate_seed2_pilot_v3` 正在 open_plan_office/3 UAV/5m/LKH_SEED=2 上运行，结果只作为机制验证，不作为正式统计。
 -
 -待 v3 完成后更新：goal_switch、svr_reuse、reach_center_links、risk_adjusted_edges、FINISH/makespan 与五方法对比。
+- 当前状态：`candidate_seed2_pilot_v3` 正在 open_plan_office/3 UAV/5m/LKH_SEED=2 上运行，结果只作为机制验证，不作为正式统计。
+- 当前状态：`candidate_seed2_pilot_v3` 首次因新参数未接入 launch XML，method_check 失败，完整保留该失败批次；修正 launch 后以 `candidate_seed2_pilot_v3b` 重新运行同一实例，结果只作为机制验证，不作为正式统计。

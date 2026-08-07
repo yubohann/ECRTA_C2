@@ -37,3 +37,8 @@
 - v3 必须出现：STEER 的 `goal_switch` 或明确的 `steer_switch_margin_rejected`；SVR 至少一次 `svr_reuse`；REACH 至少一次 `risk_center_links > 0` 且 `risk_adjusted_edges > 0`。
 - 若仍未触发，先审查实现或遥测，不进入正式批量。
 
+-## 补充：launch 参数接入
+-
+- `candidate_seed2_pilot_v3` 首次运行时 method_check 失败，原因是新参数只写进 `launch_args`，但 launch XML 未声明对应 `<arg>` 和 `<param>`，ROS 参数服务器上不存在 `reach_center_match_radius_m` 与 `svr_reuse_match_radius_m`。
+- 已在 `open_plan_office.launch`、`cubicle_office.launch`、`octa_maze.launch` 中同步新增两个 arg/param，默认 5.0。
+- 失败批次 `candidate_seed2_pilot_v3` 完整保留；修正后以 `candidate_seed2_pilot_v3b` 重跑同一实例。
