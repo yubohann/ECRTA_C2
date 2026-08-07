@@ -46,6 +46,7 @@ prct_backoff_initial_s="${30:-5.0}"
 prct_backoff_max_s="${31:-30.0}"
 prct_backoff_factor="${32:-2.0}"
 prct_backoff_enabled="${33:-false}"
+prct_local_evidence_radius_m="${34:-0.2}"
 
 if ! [[ "$reachability_shadow_max_candidates" =~ ^[0-9]+$ ]]; then
   echo "reachability_shadow_max_candidates must be a non-negative integer" >&2
@@ -87,6 +88,10 @@ if ! awk -v v="$prct_backoff_factor" 'BEGIN { exit !(v > 0.0) }'; then
 fi
 if [[ "$prct_backoff_enabled" != "true" && "$prct_backoff_enabled" != "false" ]]; then
   echo "prct_backoff_enabled must be true or false" >&2
+  exit 64
+fi
+if ! [[ "$prct_local_evidence_radius_m" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+  echo "prct_local_evidence_radius_m must be a non-negative number" >&2
   exit 64
 fi
 if [[ "$prct_enable_peer_takeover" != "true" && "$prct_enable_peer_takeover" != "false" ]]; then
@@ -157,6 +162,7 @@ printf 'prct_enable_retry_suppression=%s\nprct_repeat_threshold=%s\nprct_cooldow
   "$prct_enable_retry_suppression" "$prct_repeat_threshold" "$prct_cooldown_s" >> "$run_dir/run_manifest.txt"
 printf 'prct_backoff_initial_s=%s\nprct_backoff_max_s=%s\nprct_backoff_factor=%s\n' \
   "$prct_backoff_initial_s" "$prct_backoff_max_s" "$prct_backoff_factor" >> "$run_dir/run_manifest.txt"
+printf 'prct_local_evidence_radius_m=%s\n' "$prct_local_evidence_radius_m" >> "$run_dir/run_manifest.txt"
 printf 'prct_enable_peer_takeover=%s\nprct_peer_cert_wait_s=%s\nprct_peer_handoff_timeout_s=%s\nprct_peer_state_max_age_s=%s\n' \
   "$prct_enable_peer_takeover" "$prct_peer_cert_wait_s" "$prct_peer_handoff_timeout_s" \
   "$prct_peer_state_max_age_s" >> "$run_dir/run_manifest.txt"
@@ -269,6 +275,7 @@ launch_args+=("prct_enable_retry_suppression:=$prct_enable_retry_suppression" \
 launch_args+=("prct_backoff_initial_s:=$prct_backoff_initial_s" \
   "prct_backoff_max_s:=$prct_backoff_max_s" "prct_backoff_factor:=$prct_backoff_factor" \
   "prct_backoff_enabled:=$prct_backoff_enabled")
+launch_args+=("prct_local_evidence_radius_m:=$prct_local_evidence_radius_m")
 launch_args+=("prct_enable_peer_takeover:=$prct_enable_peer_takeover" \
   "prct_peer_cert_wait_s:=$prct_peer_cert_wait_s" \
   "prct_peer_handoff_timeout_s:=$prct_peer_handoff_timeout_s" \
@@ -344,6 +351,7 @@ for prct_pair in "prct_enable_retry_suppression:$prct_enable_retry_suppression" 
                  "prct_backoff_initial_s:$prct_backoff_initial_s" \
                  "prct_backoff_max_s:$prct_backoff_max_s" \
                  "prct_backoff_factor:$prct_backoff_factor" \
+                 "prct_local_evidence_radius_m:$prct_local_evidence_radius_m" \
                  "prct_enable_peer_takeover:$prct_enable_peer_takeover" \
                  "prct_peer_cert_wait_s:$prct_peer_cert_wait_s" \
                  "prct_peer_handoff_timeout_s:$prct_peer_handoff_timeout_s" \

@@ -1,14 +1,14 @@
 # ECRTA_C2
 
-C2-Explorer 改进实验库。当前有效主方法是 B1+ v3：失败确认目标隔离；C3/peer takeover 已进入机制级否定，不再作为主贡献。
+C2-Explorer 改进实验库。当前有效主方法是 B1+ v4：Local-Evidence-Gated Goal Quarantine。Peer takeover（B2/B3/C3）与执行时间残差校准（ECRTA）已被本地机制审计否定，不作为主贡献。
 
 ## 当前状态
 
-- C3 v8 已实现并编译通过：证书、回执、trust、边际成本门控、takeover-completed invalidation。
-- v8 修复 v7 根因：owner 收到 COMPLETED 后不再反复攻击同一 frontier；默认 `c3_takeover_completed_cooldown_s=120.0`。
-- 已修复 `registerPrctFailure` 遥测 JSON 未闭合问题。
-- C3 v8 机制 pilot：open_plan_office/3 UAV/5 m 实例 007/008/009 均已 audit-complete；007/008 出现 takeover COMPLETED 后 completed-invalidate 1 次且 exhausted 0。
-- 正式端到端收益尚未验证，pilot 不能作为论文结论。
+- B1+ v4 已实现、编译通过，并完成 1 个 pilot。
+- Pilot：open_plan_office / 3 UAV / 5 m / 120 s，FINISH 3/3，makespan 71.08 s，A* fail 12，quarantine release 3。
+- 正式主矩阵第一轮已完成：open_plan_office / 3 UAV / 5 m / 180 s，B0/B1/B1+ v4 成对 5 组。
+- 门槛判定：B1+ v4 相对 B1 的成对中位改善约 3.87%，低于 10% 预注册阈值；未通过，保留为负结果。
+- 正在修复 v4 已知实现问题并设计失败链可复现的 v5；不得把无失败实例的随机 makespan 差异写成收益。
 - 仓库不包含 C2 上游源码、地图、rosbag 和大日志，只保存方法、协议、脚本和聚合结果。
 
 ## 固定边界
@@ -20,57 +20,59 @@ C2-Explorer 改进实验库。当前有效主方法是 B1+ v3：失败确认目�
 
 ## 方法
 
-- B0：原始 C2。
-- B1：只增加重复 A* 失败抑制和冷却。
-- B1+ v3：在 B1 固定冷却之上，达到阈值后当前 frontier map epoch 内隔离失败目标；v2 指数退避已因 n=5 无收益判废。
-- B2：只读 peer 可达性证书。
-- B3：证书 + 事件触发 peer takeover。
-- C3：B2 证书框架 + trust 门控 + 边际成本接管 + takeover-completed 失效 + 无收益回退。
+- B0：原始 C2，不做失败抑制。
+- B1：固定 5 s 冷却。
+- B1+ v4：同一目标在相同局部 occupancy/inflated occupancy evidence hash 下连续失败达到阈值后隔离；局部证据变化、目标消失或 A* 成功才释放；候选全部隔离时回退原始 C2。
+- B2/B3/C3：peer 证书与 takeover 已实测无端到端收益，保留在历史文档中，不进入主消融。
+- ECRTA：执行时间残差校准机制审计未通过，不进入主方法。
 
-## 关键参数（C3 pilot）
+## 历史方法判定
 
-- communication_threshold_m：5.0
-- duration_s：120
-- prct_enable_peer_takeover：true
-- c3_enable_marginal_gate：true
-- c3_min_repeat_count：3
-- c3_benefit_margin_s：1.0
-- c3_takeover_cooldown_s：30.0
-- c3_max_takeover_attempts：3
-- c3_takeover_completed_cooldown_s：120.0
+- B1+ v2 指数退避：n=5 无收益，判废。
+- B1+ v3 map-epoch quarantine：5 组正式成对中相对 B1 改善，但相对 B0 不稳定，且全局 epoch 释放过粗，升级为 v4。
+- Peer takeover：5 组正式端到端收益为 0，不再进入主消融。
+- ECRTA：机制审计未通过。
 
-## v8 pilot
+## v3 正式成对 batch
 
-| 实例 | 场景 | UAV | FINISH | A*失败 | takeover | completed invalidate | exhausted | makespan proxy(s) | 审计 |
-|---|---|---:|---:|---:|---:|---:|---:|---:|---|
-| c3_open3_v8_007 | open_plan_office | 3 | 3/3 | 11 | 1 sent/1 executed/1 completed | 1 | 0 | 64.75 | audit-complete |
-| c3_open3_v8_008 | open_plan_office | 3 | 3/3 | 11 | 1 sent/1 executed/1 completed | 1 | 0 | 85.44 | audit-complete |
-| c3_open3_v8_009 | open_plan_office | 3 | 3/3 | 4 | 0 | 0 | 0 | 77.44 | audit-complete |
+场景：open_plan_office / 3 UAV / 5 m / 180 s。
 
-## 门槛判断
+| instance | B0 makespan | B1 makespan | B1+ v3 makespan | B1+ v3 - B1 |
+|---:|---:|---:|---:|---:|
+| 1 | 61.50 | 98.28 | 81.57 | -16.71 |
+| 2 | 66.82 | 104.27 | 73.66 | -30.61 |
+| 3 | 84.03 | 84.85 | 70.17 | -14.68 |
+| 4 | 76.06 | 77.33 | 76.13 | -1.20 |
+| 5 | 80.30 | 60.08 | 94.63 | +34.55 |
 
-- G0 可审计运行：通过。
-- G1 重复不可达失败链：v7 存在，v8 需要多实例复核。
-- G2 peer 可达样本：通过。
-- G3 证书可靠性：机制层通过。
-- G4 端到端收益：未通过正式统计。
-- G5 无退化：未通过正式统计。
+- B1+ v3 vs B1：成对 mean=-5.73 s，median=-14.68 s。
+- B1+ v3 vs B0：mean=+5.49 s，median=+6.83 s。
+- 结论：v3 不能作为主方法，继续修成 v4。
+
+## v4 Pilot
+
+| 指标 | 值 |
+|---|---:|
+| FINISH | 3/3 |
+| makespan | 71.08 s |
+| A* fail | 12 |
+| prct_retry_suppression_register | 12 |
+| prct_retry_suppression_skip | 8 |
+| prct_quarantine_release | 3（goal_removed） |
+| prct_candidate_filter | 7 |
+
+单次 pilot 不是论文结论，只作为进入正式 batch 的机制依据。
 
 ## 下一步
 
-1. 已新增 B1+ v3 设计文档：docs/B1_PLUS_V3_QUARANTINE_METHOD_SPEC_20260807_zh.md。
-2. 已新增 B0/B1/B1+ 成对 batch 脚本：scripts/run_b1plus_batch.sh。
-3. v3 正式成对 batch：open_plan_office / 3 UAV / 5 m / 180 s，至少 5 对后扩展到其他两图和 2/4 UAV。
-4. 主门槛：B1+ v3 相对 B1 的 A* 失败次数与失败链长度下降，makespan 不系统性恶化，FINISH 率不低于 B1；失败样本全部进入分母。
+1. v4 正式结果已归档：results/B1_PLUS_V4_BATCH_20260807/README.md。
+2. 修复 v4 默认 evidence radius 不一致和 cooldown key 与 map epoch 耦合。
+3. 以失败链稳定可复现为前提设计 v5；同初始状态/种子控制不可省略。
+4. 若 v5 仍无端到端收益，保留负结果，不放宽阈值。
 
-## 2026-08-07 v8.1 更新
+## 参考文档
 
-- C3 v8.1 将 B1 重复 A* 失败抑制作为保底层，只有同时满足 trust gate 和 marginal-cost gate 时才进入 peer takeover。
-- 已修复 C3 正式 batch 中 suppress=false 的配置错误；C3 现在与 B1 一样使用 prct_enable_retry_suppression=true。
-- 4 个 C3 v8.1 pilot 全部 FINISH；有失败链的实例同时出现 retry suppression 与 takeover COMPLETED invalidate，无失败链实例不会强行 takeover。
-- 5 对 B0/B1/C3 正式交错 batch 已完成；详细结果见 C3_V8_1_TRUST_GATED_WITH_B1_SUPPRESSION_20260807_zh.md。
-- 5 对 B0/B1/C3 正式交错 batch 已完成：C3 相对 B1 成对中位差 -7.56 s（约 8.9%），低于 10% 预注册门槛；5 对中 takeover 触发次数为 0，因此本轮收益不能归因于 peer takeover。
-- 2 UAV 正式交错 batch 已完成：C3 相对 B1 成对中位差 -14.31 s，约 14.3%，但 takeover 总数仍为 0，不能归因给 peer takeover。
-- 180s 失败链压力 batch 已完成：B0 出现 1/5 实例卡死（343 次 A* 失败、2/3 完成），B1 与 C3 均为 3/3 完成；5 对实例中 takeover_sent/executed 均为 0，C3 相对 B1 成对中位差 +4.76 s，因此 peer takeover 无端到端收益。
-- 下一阶段主方法切换为 B1+：在 B1 冷却之外增加 owner-level 失败目标降权/过期失效，takeover 只作为冷却后仍持续失败的实验性后备，不再进入正式主消融。
-- B1+ v3 已完成 120 s 参数验证 pilot：open_plan_office/3 UAV 与 2 UAV 均正常运行，quarantine_enabled=1、backoff_s=-1；2 UAV 观测到 open_set_exhausted 与隔离注册。
+- docs/B1_PLUS_V4_LOCAL_EVIDENCE_QUARANTINE_20260807_zh.md
+- docs/B1_PLUS_V3_QUARANTINE_METHOD_SPEC_20260807_zh.md
+- docs/PRCT_C2_REPORT_zh.md
+- docs/PRCT_C2_PAPER_DECISION_zh.md

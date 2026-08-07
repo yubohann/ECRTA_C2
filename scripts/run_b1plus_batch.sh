@@ -17,12 +17,14 @@ count="$3"
 duration_s="${4:-180}"
 communication_threshold="${5:-5.0}"
 batch_id="${6:-b1plus}"
+prct_local_evidence_radius_m="${7:-0.2}"
 
 case "$scene" in open_plan_office|cubicle_office|octa_maze) ;; *) usage ;; esac
 [[ "$drone_num" =~ ^[0-9]+$ && "$drone_num" -ge 2 && "$drone_num" -le 4 ]] || usage
 [[ "$count" =~ ^[1-9][0-9]*$ ]] || usage
 [[ "$duration_s" =~ ^[0-9]+$ && "$duration_s" -gt 0 ]] || usage
 [[ "$communication_threshold" =~ ^([0-9]+([.][0-9]+)?|inf)$ ]] || usage
+[[ "$prct_local_evidence_radius_m" =~ ^[0-9]+([.][0-9]+)?$ ]] || usage
 
 runner="$ECRTA_ROOT/scripts/run_scene_pilot.sh"
 comm_label=$(printf '%s' "$communication_threshold" | tr '.' 'p')
@@ -78,7 +80,8 @@ for ((i = 1; i <= count; i++)); do
       "$communication_threshold" "$candidates" "$peers" "$suppress" \
       "3" "5.0" "$takeover" "0.25" "2.0" "2.0" "$c3" \
       "1.0" "0.5" "0.5" "0.5" "2.0" "2.0" "3.0" "1.0" "3" "0.3" "0.6" "30.0" "3" "120.0" \
-      "$backoff_initial" "$backoff_max" "$backoff_factor" "$backoff_enabled"
+      "$backoff_initial" "$backoff_max" "$backoff_factor" "$backoff_enabled" \
+      "$prct_local_evidence_radius_m"
     run_exit=$?
     set -e
 
