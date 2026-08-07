@@ -120,6 +120,11 @@ def wilcoxon(a, b):
 def main():
     batch_root = Path(sys.argv[1])
     methods = ["b0", "b1", "reach", "svr", "steer"]
+    drone_num = 4
+    import re
+    m = re.search(r"uav_(\d+)", str(batch_root))
+    if m:
+        drone_num = int(m.group(1))
     runs = {}
     status_file = batch_root / "status.tsv"
     if status_file.is_file():
@@ -187,7 +192,7 @@ def main():
         mean = sum(ms) / len(ms) if ms else float("nan")
         medians[m] = med
         makespan_lists[m] = ms
-        n_finish = sum(1 for r in rows if r.get("finish", 0) == 4)
+        n_finish = sum(1 for r in rows if r.get("finish", 0) == drone_num)
         infra = sum(1 for r in rows if r.get("infra_suspect"))
         print(
             f"{m:8s} {len(rows):3d} {n_finish}/{len(rows)}"
