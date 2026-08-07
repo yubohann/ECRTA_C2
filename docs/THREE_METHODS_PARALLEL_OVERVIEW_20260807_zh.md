@@ -1,7 +1,7 @@
 # THREE_METHODS_PARALLEL_OVERVIEW
 
 日期：2026-08-07
-状态：并行实现与对比的总入口，不是投稿结论。
+状态：并行实现与对比的总入口，不是投稿结论；当前已进入固定 seed 候选实例 pilot。
 
 ## 1. 三方法一句话
 
@@ -65,6 +65,8 @@ runner 启动后会把 /lkh_seed 写入参数服务器并校验，只有校验�
 - octa_maze / 4 UAV / 5 m。
 
 这些格子已知失败事件多，避免 open_plan_office / 3 UAV 的低失败率随机波动。
+
+固定 seed 搜索发现 `open_plan_office / 3 UAV / 5 m / LKH_SEED=2` 是一个高失败 B0 实例（2/3 FINISH、407 次 A* 失败），因此当前 pilot 先在该实例上验证 REACH/SVR/STEER 是否真正触发并产生可审计事件；它不作为正式主矩阵的替代，正式矩阵仍按上表执行。
 
 ## 7. 正式门槛
 

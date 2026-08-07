@@ -26,6 +26,12 @@ grep -q 'c3_enable_marginal_gate.*== "true"' "$runner" || fail "runner C3 hard g
 grep -q 'c3_enable_marginal_gate="${15:-false}"' "$runner" || fail "runner C3 default is not false"
 grep -q 'METHOD_MODE must be baseline|suppress|reach|svr|steer' "$runner" || fail "runner method mode whitelist missing"
 
+for legacy_ref in 'run_b1plus_batch' 'run_c3_formal_batch' 'run_prct_batch' 'audit_peer_handoff_active' 'aggregate_prct_formal' 'summarize_prct_stats'; do
+  if grep -q "$legacy_ref" "$runner" "$batch" "$search"; then
+    fail "new protocol still references legacy script: $legacy_ref"
+  fi
+done
+
 if grep -E 'peer_takeover=true|c3_enable_marginal_gate=true' "$batch" "$search"; then
   fail "new batch/search still enables old protocol flags"
 fi

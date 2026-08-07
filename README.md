@@ -8,8 +8,8 @@ C2-Explorer 改进实验库。当前不在主方法中使用 peer takeover、执
 - 方法说明见 `docs/THREE_METHODS_PARALLEL_OVERVIEW_20260807_zh.md`。
 - 方法工作副本：`/home/c2dev/c2_explorer_reproduction/workspace/reachability_retry_c2_method`。
 - 统一 `method_mode=baseline|suppress|reach|svr|steer`，launch 参数和遥测文件已接上。
-- 已完成第一轮机制 pilot，确认代码能启动、能输出 `failures.jsonl / method_events.jsonl / command_events.jsonl / task_events.jsonl`。
-- 当前协议已固定 `LKH_SEED`；下一步先用固定 seed 搜索可复现高失败 B0 实例，再成对运行 B0/B1/REACH/SVR/STEER。
+- 当前协议已固定 `LKH_SEED`；所有成对运行必须使用同一 seed。
+- 固定 seed 搜索已命中 `open_plan_office / 3 UAV / 5 m / LKH_SEED=2`：B0 为 2/3 FINISH、407 次 A* 失败、1093 次 LKH 请求；五方法 pilot 正在同一实例上运行。
 
 ## 固定边界
 
@@ -36,14 +36,18 @@ C2-Explorer 改进实验库。当前不在主方法中使用 peer takeover、执
 
 - `scripts/run_scene_pilot.sh`：单实例运行器，支持 `METHOD_MODE`、`LKH_SEED`、方法参数和 `PRCT_RUN_FULL_DURATION`。
 - `scripts/run_three_method_batch.sh`：B0/B1/REACH/SVR/STEER 成对 batch 运行器，支持 `LKH_SEED`。
-- 当前协议固定 `LKH_SEED`；所有成对运行必须使用同一 `lkh_seed`，未记录 seed 的旧日志不参与公平比较。
 - `scripts/search_b0_fixed_seed.sh`：逐固定 seed 搜索高失败 B0 实例，不产生方法收益结论。
- - `scripts/analyze_telemetry.py`：正式遥测聚合；`scripts/audit_peer_handoff_active.py` 仅保留给历史 peer 日志审计，不参与新协议。
- - `scripts/verify_three_method_gate.sh`：新协议硬门禁检查，确保旧 peer/C3 开关不进入 B0/B1/REACH/SVR/STEER 启动链。
+- `scripts/analyze_telemetry.py`：正式遥测聚合；历史 peer/C3 审计脚本不参与新协议。
+- `scripts/verify_three_method_gate.sh`：新协议硬门禁检查，确保旧 peer/C3 开关和旧脚本不进入 B0/B1/REACH/SVR/STEER 启动链。
 
 ## 下一步
-1. 使用固定 `LKH_SEED` 搜索可复现高失败 B0 实例。
-2. 在同一固定 seed 上完成 B0/B1/REACH/SVR/STEER 机制 pilot。
-3. 若 REACH/SVR 没有触发，先找失败率更高的实例或扰动条件，不能把无失败实例写成收益。
-4. 统计成对 batch，所有失败/超时样本保留，不删除、不挑种子、不放宽阈值。
- 5. 每次批量前运行 `scripts/verify_three_method_gate.sh`，并保留 `method_check.tsv`。
+
+1. 完成 `open_plan_office / 3 UAV / 5 m / LKH_SEED=2` 的 B0/B1/REACH/SVR/STEER pilot，检查事件触发与失败日志。
+2. 若 REACH/SVR/STEER 在该实例上均未触发或结果不可解释，先修实现，不能把无失败实例写成收益。
+3. 统计成对 batch，所有失败/超时样本保留，不删除、不挑种子、不放宽阈值。
+4. 每次批量前运行 `scripts/verify_three_method_gate.sh`，并保留 `method_check.tsv`。
+
+## 实验设计参考
+
+- 网上刊会/预印本的实验设计校准见 `docs/LITERATURE_EXPERIMENT_DESIGN_20260807_zh.md`。
+- 该文档只用于校准矩阵、配对和统计口径，不替代本地机制审计和成对统计。
