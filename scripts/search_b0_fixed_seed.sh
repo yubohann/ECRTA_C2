@@ -13,10 +13,7 @@ drone_num="$2"
 duration_s="$3"
 seed_start="$4"
 seed_end="$5"
-communication_threshold="$6"
-if [[ -z "$communication_threshold" ]]; then
-  communication_threshold="5.0"
-fi
+communication_threshold="\${6:-5.0}"
 
 case "$scene" in open_plan_office|cubicle_office|octa_maze) ;; *) usage ;; esac
 [[ "$drone_num" =~ ^[0-9]+$ && "$drone_num" -ge 2 && "$drone_num" -le 4 ]] || usage
@@ -27,7 +24,8 @@ case "$scene" in open_plan_office|cubicle_office|octa_maze) ;; *) usage ;; esac
 
 runner="$ECRTA_ROOT/scripts/run_scene_pilot.sh"
 comm_label=$(printf '%s' "$communication_threshold" | tr '.' 'p')
-search_root="$ECRTA_LOG_ROOT/seed_search/$scene/uav_$drone_num/comm_$comm_label"m
+comm_dir="comm_\${comm_label}m"
+search_root="$ECRTA_LOG_ROOT/seed_search/$scene/uav_$drone_num/$comm_dir"
 mkdir -p "$search_root"
 rm -f "$search_root/candidate.txt"
 csv="$search_root/b0_seed_search.csv"

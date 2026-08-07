@@ -52,11 +52,13 @@ prct_eviction_max_extra_cost="${36:-20.0}"
 method_mode="${METHOD_MODE:-baseline}"
 reach_risk_weight="${REACH_RISK_WEIGHT:-0.25}"
 reach_risk_penalty="${REACH_RISK_PENALTY:-1.0}"
+reach_center_match_radius_m="${REACH_CENTER_MATCH_RADIUS_M:-5.0}"
 steer_goal_min_hold_s="${STEER_GOAL_MIN_HOLD_S:-3.0}"
 steer_switch_margin="${STEER_SWITCH_MARGIN:-0.2}"
 steer_load_bias="${STEER_LOAD_BIAS:-0.1}"
 svr_reallocation_cost_m="${SVR_REALLOCATION_COST_M:-2.0}"
 svr_solver_cost_s="${SVR_SOLVER_COST_S:-0.5}"
+svr_reuse_match_radius_m="${SVR_REUSE_MATCH_RADIUS_M:-5.0}"
 run_full_duration="${PRCT_RUN_FULL_DURATION:-false}"
 lkh_seed="${LKH_SEED:-1}"
 
@@ -68,7 +70,7 @@ if [[ "$prct_enable_peer_takeover" == "true" || "$c3_enable_marginal_gate" == "t
   echo "peer takeover and C3 marginal gate are disabled in the three-method protocol" >&2
   exit 64
 fi
-for method_numeric in "$reach_risk_weight" "$reach_risk_penalty" "$steer_goal_min_hold_s" "$steer_switch_margin" "$steer_load_bias" "$svr_reallocation_cost_m" "$svr_solver_cost_s"; do
+for method_numeric in "$reach_risk_weight" "$reach_risk_penalty" "$reach_center_match_radius_m" "$steer_goal_min_hold_s" "$steer_switch_margin" "$steer_load_bias" "$svr_reallocation_cost_m" "$svr_solver_cost_s" "$svr_reuse_match_radius_m"; do
   if ! [[ "$method_numeric" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
     echo "method numeric params must be non-negative numbers" >&2
     exit 64
@@ -207,6 +209,8 @@ printf 'prct_eviction_max_extra_cost=%s\n' "$prct_eviction_max_extra_cost" >> "$
 printf 'lkh_seed=%s\n' "$lkh_seed" >> "$run_dir/run_manifest.txt"
 printf 'method_mode=%s\nreach_risk_weight=%s\nreach_risk_penalty=%s\nsteer_goal_min_hold_s=%s\nsteer_switch_margin=%s\nsteer_load_bias=%s\nsvr_reallocation_cost_m=%s\nsvr_solver_cost_s=%s\n' \
   "$method_mode" "$reach_risk_weight" "$reach_risk_penalty" "$steer_goal_min_hold_s" "$steer_switch_margin" "$steer_load_bias" "$svr_reallocation_cost_m" "$svr_solver_cost_s" >> "$run_dir/run_manifest.txt"
+printf 'reach_center_match_radius_m=%s\n' "$reach_center_match_radius_m" >> "$run_dir/run_manifest.txt"
+printf 'svr_reuse_match_radius_m=%s\n' "$svr_reuse_match_radius_m" >> "$run_dir/run_manifest.txt"
 printf 'prct_enable_peer_takeover=%s\nprct_peer_cert_wait_s=%s\nprct_peer_handoff_timeout_s=%s\nprct_peer_state_max_age_s=%s\n' \
   "$prct_enable_peer_takeover" "$prct_peer_cert_wait_s" "$prct_peer_handoff_timeout_s" \
   "$prct_peer_state_max_age_s" >> "$run_dir/run_manifest.txt"
@@ -335,9 +339,9 @@ launch_args+=("prct_local_evidence_radius_m:=$prct_local_evidence_radius_m")
 launch_args+=("prct_evict_on_first_failure:=$prct_evict_on_first_failure")
 launch_args+=("prct_eviction_max_extra_cost:=$prct_eviction_max_extra_cost")
 launch_args+=("method_mode:=$method_mode")
-launch_args+=("reach_risk_weight:=$reach_risk_weight" "reach_risk_penalty:=$reach_risk_penalty")
+launch_args+=("reach_risk_weight:=$reach_risk_weight" "reach_risk_penalty:=$reach_risk_penalty" "reach_center_match_radius_m:=$reach_center_match_radius_m")
 launch_args+=("steer_goal_min_hold_s:=$steer_goal_min_hold_s" "steer_switch_margin:=$steer_switch_margin" "steer_load_bias:=$steer_load_bias")
-launch_args+=("svr_reallocation_cost_m:=$svr_reallocation_cost_m" "svr_solver_cost_s:=$svr_solver_cost_s")
+launch_args+=("svr_reallocation_cost_m:=$svr_reallocation_cost_m" "svr_solver_cost_s:=$svr_solver_cost_s" "svr_reuse_match_radius_m:=$svr_reuse_match_radius_m")
 launch_args+=("prct_enable_peer_takeover:=$prct_enable_peer_takeover" \
   "prct_peer_cert_wait_s:=$prct_peer_cert_wait_s" \
   "prct_peer_handoff_timeout_s:=$prct_peer_handoff_timeout_s" \
@@ -469,11 +473,13 @@ for method_pair in \
   "method_mode:$method_mode" \
   "reach_risk_weight:$reach_risk_weight" \
   "reach_risk_penalty:$reach_risk_penalty" \
+ "reach_center_match_radius_m:$reach_center_match_radius_m" \
   "steer_goal_min_hold_s:$steer_goal_min_hold_s" \
   "steer_switch_margin:$steer_switch_margin" \
   "steer_load_bias:$steer_load_bias" \
   "svr_reallocation_cost_m:$svr_reallocation_cost_m" \
-  "svr_solver_cost_s:$svr_solver_cost_s"; do
+  "svr_solver_cost_s:$svr_solver_cost_s" \
+  "svr_reuse_match_radius_m:$svr_reuse_match_radius_m"; do
   method_name="${method_pair%%:*}"
   method_expected="${method_pair#*:}"
   method_actual=$(rosparam get "/$method_name" 2>/dev/null | tr -d '[:space:]' || true)

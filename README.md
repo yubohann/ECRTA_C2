@@ -9,7 +9,8 @@ C2-Explorer 改进实验库。当前不在主方法中使用 peer takeover、执
 - 方法工作副本：`/home/c2dev/c2_explorer_reproduction/workspace/reachability_retry_c2_method`。
 - 统一 `method_mode=baseline|suppress|reach|svr|steer`，launch 参数和遥测文件已接上。
 - 当前协议已固定 `LKH_SEED`；所有成对运行必须使用同一 seed。
-- 固定 seed 搜索已命中 `open_plan_office / 3 UAV / 5 m / LKH_SEED=2`：B0 为 2/3 FINISH、407 次 A* 失败、1093 次 LKH 请求；五方法 pilot 正在同一实例上运行。
+- 首个 seed2 pilot（v3b）已完成，但该候选在当前源码下不可复现：B0 为 3/3 FINISH、0 次 A* 失败；旧搜索中的 407 次失败来自源码更新前的运行。
+- `cubicle_office / 4 UAV / 5 m / LKH_SEED=1` 在当前源码下 B0 有 277 次 A* 失败、275 次轨迹失败，已作为机制验证实例。
 
 ## 固定边界
 
@@ -37,15 +38,15 @@ C2-Explorer 改进实验库。当前不在主方法中使用 peer takeover、执
 - `scripts/run_scene_pilot.sh`：单实例运行器，支持 `METHOD_MODE`、`LKH_SEED`、方法参数和 `PRCT_RUN_FULL_DURATION`。
 - `scripts/run_three_method_batch.sh`：B0/B1/REACH/SVR/STEER 成对 batch 运行器，支持 `LKH_SEED`。
 - `scripts/search_b0_fixed_seed.sh`：逐固定 seed 搜索高失败 B0 实例，不产生方法收益结论。
-- `scripts/analyze_telemetry.py`：正式遥测聚合；历史 peer/C3 审计脚本不参与新协议。
+- `scripts/inspect_three_method_runs.py`：按 scene/uav/batch/run 审计 B0/B1/REACH/SVR/STEER 的机制事件与失败链。
 - `scripts/verify_three_method_gate.sh`：新协议硬门禁检查，确保旧 peer/C3 开关和旧脚本不进入 B0/B1/REACH/SVR/STEER 启动链。
 
 ## 下一步
 
-1. 完成 `open_plan_office / 3 UAV / 5 m / LKH_SEED=2` 的 B0/B1/REACH/SVR/STEER pilot，检查事件触发与失败日志。
-2. 若 REACH/SVR/STEER 在该实例上均未触发或结果不可解释，先修实现，不能把无失败实例写成收益。
-3. 统计成对 batch，所有失败/超时样本保留，不删除、不挑种子、不放宽阈值。
-4. 每次批量前运行 `scripts/verify_three_method_gate.sh`，并保留 `method_check.tsv`。
+1. 在当前源码下重跑 seed 搜索，废弃源码更新前的高失败候选；固定 `LKH_SEED` 不足以保证同一实例，必须同时记录首轮 goal、首次分配和运行摘要。
+2. REACH-C2 当前只消费 A* 失败证据，cubicle pilot 中 B1 把失败全部抑制后 `risk_adjusted_edges=0`；下一步把轨迹规划失败也计入执行风险，并在仍有失败的格子上验证。
+3. 三图主矩阵继续按 `2/3/4 UAV x 5 m` 至少 10 个实例推进；10/15 m 与无限通信至少 5 个实例。
+4. 每次批量前运行 `scripts/verify_three_method_gate.sh`，并保留 `method_check.tsv`；旧 peer/C3 脚本不得留在活动 scripts 目录。
 
 ## 实验设计参考
 
