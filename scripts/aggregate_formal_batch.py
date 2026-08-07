@@ -53,6 +53,9 @@ def stats_key(d, method):
         "steer_switch": ec.get("goal_switch", 0) or 0,
         "steer_margin_rej": ec.get("steer_switch_margin_rejected", 0) or 0,
         "astar_diag": ec.get("astar_search_diagnostic", 0) or 0,
+        "all_cooled_fallback": ec.get("prct_all_cooled_fallback", 0) or 0,
+        "traj_request": ec.get("traj_request", 0) or 0,
+        "fsm_transition": ec.get("fsm_transition", 0) or 0,
     }
 
 
@@ -123,12 +126,28 @@ def main():
         for r in rows:
             if r.get("makespan") is None and not r.get("missing"):
                 r["makespan"] = 180.0
+            # Infra-quality flag: too little activity to be a valid sample.
+            r["infra_suspect"] = (
+                r.get("astar_diag", 0) == 0
+                and r.get("traj_request", 0) < 50
+                and r.get("finish", 0) == 0
+            )
+
+    # Valid samples only (exclude infra-suspect); infra rate reported separately.
+    valid = {}
+    for m, rows in runs.items():
+        valid[m] = [r for r in rows if not r.get("infra_suspect") and not r.get("missing") and not r.get("parse_error")]
+    infra_counts = {m: sum(1 for r in rows if r.get("infra_suspect")) for m, rows in runs.items()}
+    print(f"infra_suspect (render crash, excluded): {infra_counts}")
+
+    rows = valid
 
     print(f"batch: {batch_root}")
     print(f"{'method':8s} {'n':>3s} {'finish_frac':>12s} {'makespan_med':>13s} "
           f"{'makespan_mean':>13s} {'astar_fail_med':>13s} {'astar_fail_sum':>14s} "
           f"{'traj_fail_sum':>13s} {'json_err':>8s} {'reach_adj':>9s} {'svr_gate':>9s} "
-          f"{'svr_reuse':>9s} {'steer_skip':>10s} {'steer_allcool':>13s} {'steer_switch':>12s}")
+          f"{'svr_reuse':>9s} {'steer_skip':>10s} {'steer_allcool':>13s} {'steer_switch':>12s} "
+          f"{'infra_suspect':>13s}")
     medians = {}
     makespan_lists = {}
     for m in methods:
@@ -141,6 +160,7 @@ def main():
         medians[m] = med
         makespan_lists[m] = ms
         n_finish = sum(1 for r in rows if r.get("finish", 0) == 4)
+        infra = sum(1 for r in rows if r.get("infra_suspect"))
         print(
             f"{m:8s} {len(rows):3d} {n_finish}/{len(rows)}"
             f"{n_finish / len(rows):>11.2f} {med:13.2f} {mean:13.2f} "
@@ -152,7 +172,8 @@ def main():
             f"{sum(r['svr_reuse'] for r in rows):9d} "
             f"{sum(r['steer_view_skip'] for r in rows):10d} "
             f"{sum(r['steer_all_cooled'] for r in rows):13d} "
-            f"{sum(r['steer_switch'] for r in rows):12d}"
+            f"{sum(r['steer_switch'] for r in rows):12d} "
+            f"{infra:13d}"
         )
 
     print("\npaired: method vs B1 (makespan, truncated 180s if missing):")
