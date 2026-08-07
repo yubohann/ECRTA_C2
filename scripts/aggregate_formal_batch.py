@@ -23,7 +23,7 @@ def load_summary(run_dir: Path):
     return d
 
 
-def stats_key(d, method):
+def stats_key(d, method, run_dir=None):
     if d is None:
         return {"method": method, "missing": True}
     if d.get("parse_error"):
@@ -34,6 +34,19 @@ def stats_key(d, method):
     lkh_fail = sum(
         lkh.get(k, {}).get("failure", 0) or 0 for k in ("ACVRP", "ATSP-frontier", "ATSP-grid")
     ) if isinstance(lkh, dict) else -1
+    me = {}
+    if run_dir is not None:
+        mf = Path(run_dir) / "method_events.jsonl"
+        if mf.is_file():
+            for line in mf.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                try:
+                    ev = json.loads(line)
+                except Exception:
+                    continue
+                if isinstance(ev, dict) and ev.get("event"):
+                    me[ev["event"]] = me.get(ev["event"], 0) + 1
     return {
         "method": method,
         "run": d.get("run_dir", "?"),
@@ -44,16 +57,17 @@ def stats_key(d, method):
         "traj_fail": ec.get("trajectory_failure", 0) or 0,
         "lkh_fail": lkh_fail,
         "json_err": d.get("json_parse_errors", 0) or 0,
-        "reach_adjust": ec.get("reach_cost_adjustment", 0) or 0,
-        "reach_alloc_adjust": ec.get("reach_allocation_cost_adjustment", 0) or 0,
-        "svr_gate": ec.get("svr_reallocation_gate", 0) or 0,
-        "svr_reuse": ec.get("svr_reuse", 0) or 0,
-        "steer_view_skip": ec.get("goal_view_skip", 0) or 0,
-        "steer_all_cooled": ec.get("goal_view_all_cooled", 0) or 0,
-        "steer_switch": ec.get("goal_switch", 0) or 0,
-        "steer_margin_rej": ec.get("steer_switch_margin_rejected", 0) or 0,
+        "reach_adjust": me.get("reach_cost_adjustment", 0) or 0,
+        "reach_alloc_adjust": me.get("reach_allocation_cost_adjustment", 0) or 0,
+        "svr_gate": me.get("svr_reallocation_gate", 0) or 0,
+        "svr_reuse": me.get("svr_reuse", 0) or 0,
+        "steer_view_skip": me.get("goal_view_skip", 0) or 0,
+        "steer_all_cooled": me.get("goal_view_all_cooled", 0) or 0,
+        "steer_switch": me.get("goal_switch", 0) or 0,
+        "steer_margin_rej": me.get("steer_switch_margin_rejected", 0) or 0,
+        "steer_hold": me.get("steer_all_cooled_hold", 0) or 0,
         "astar_diag": ec.get("astar_search_diagnostic", 0) or 0,
-        "all_cooled_fallback": ec.get("prct_all_cooled_fallback", 0) or 0,
+        "all_cooled_fallback": me.get("prct_all_cooled_fallback", 0) or 0,
         "traj_request": ec.get("traj_request", 0) or 0,
         "fsm_transition": ec.get("fsm_transition", 0) or 0,
     }
@@ -107,19 +121,33 @@ def main():
     batch_root = Path(sys.argv[1])
     methods = ["b0", "b1", "reach", "svr", "steer"]
     runs = {}
-    for run_dir in sorted(batch_root.glob("*/")):
-        if not run_dir.is_dir():
-            continue
-        name = run_dir.name
-        method = None
-        for m in methods:
-            if name.startswith(f"three_") and f"_{m}_" in name:
-                method = m
-                break
-        if method is None:
-            continue
-        d = load_summary(run_dir)
-        runs.setdefault(method, []).append(stats_key(d, method))
+    status_file = batch_root / "status.tsv"
+    if status_file.is_file():
+        for line in status_file.read_text(encoding="utf-8").splitlines()[1:]:
+            parts = line.split("\t")
+            if len(parts) < 8:
+                continue
+            method = parts[0]
+            run_dir = Path(parts[7])
+            if not run_dir.is_dir():
+                continue
+            d = load_summary(run_dir)
+            runs.setdefault(method, []).append(stats_key(d, method, run_dir))
+    else:
+        # fallback: glob sibling run dirs (pre-status layout)
+        for run_dir in sorted(batch_root.parent.parent.glob("three_*")):
+            if not run_dir.is_dir():
+                continue
+            name = run_dir.name
+            method = None
+            for m in methods:
+                if f"_{m}_" in name:
+                    method = m
+                    break
+            if method is None:
+                continue
+            d = load_summary(run_dir)
+            runs.setdefault(method, []).append(stats_key(d, method, run_dir))
 
     # R2: unfinished runs count as 180s truncated makespan.
     for m, rows in runs.items():
