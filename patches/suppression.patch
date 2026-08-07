@@ -1,0 +1,29 @@
+﻿*** Begin Patch
+*** Update File: //wsl$/Ubuntu/home/c2dev/c2_explorer_reproduction/workspace/reachability_retry_c2_method/src/swarm_exploration/exploration_manager/src/c2_exploration_manager.cpp
+@@
+ bool C2ExplorationManager::isPrctTargetCooled(
+     const int frontier_id, const Vector3d& goal) const {
+   if (frontier_id < 0) return false;
+-  if (prct_enable_retry_suppression_) {
++  const bool suppression_active =
++      prct_enable_retry_suppression_ || methodSuppressionActive();
++  if (suppression_active) {
+     const double now_wall_s = ros::WallTime::now().toSec();
+-    const bool quarantine_mode = prct_backoff_enabled_;
++    const bool quarantine_mode =
++        prct_backoff_enabled_ || method_mode_ == "reach" || method_mode_ == "svr";
+     const int effective_threshold =
+-        (quarantine_mode && prct_evict_on_first_failure_)
+-            ? 1
+-            : prct_repeat_threshold_;
++        methodSuppressionActive()
++            ? methodRepeatThreshold()
++            : ((quarantine_mode && prct_evict_on_first_failure_) ? 1 : prct_repeat_threshold_);
+@@
+   if (frontier_ids.empty()) return frontier_ids;
+   const bool c3_active = c3MarginalGateActive();
+-  if (!c3_active && !prct_enable_retry_suppression_) return frontier_ids;
++  if (!c3_active && !prct_enable_retry_suppression_ && !methodSuppressionActive()) {
++    return frontier_ids;
++  }
+*** End Patch

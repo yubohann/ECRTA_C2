@@ -1,0 +1,37 @@
+﻿*** Begin Patch
+*** Update File: //wsl$/Ubuntu/home/c2dev/c2_explorer_reproduction/workspace/reachability_retry_c2_method/src/swarm_exploration/exploration_manager/src/c2_exploration_manager.cpp
+@@
+       std::ostringstream task_fields;
+       task_fields << std::setprecision(17)
+                   << "\"allocation_seq\":" << allocation_seq
+                   << ",\"participant_drone_id\":" << participant_drone_id
+                   << ",\"task_index\":" << task_idx
+@@
+                   << ",\"task_x\":" << assigned.x()
+                   << ",\"task_y\":" << assigned.y()
+                   << ",\"task_z\":" << assigned.z();
+       logTelemetryEvent("allocation_task", task_fields.str());
++      if (methodSvrActive()) {
++        const std::string task_uid =
++            "uav" + std::to_string(participant_drone_id) + "_alloc" +
++            std::to_string(allocation_seq) + "_idx" + std::to_string(task_idx);
++        auto& rev = task_ledger_seq_[task_uid];
++        ++rev;
++        std::ostringstream ledger;
++        ledger << "\"task_uid\":\"" << task_uid
++               << "\",\"task_revision\":" << rev
++               << ",\"task_state\":\"active\""
++               << ",\"owner_id\":" << participant_drone_id
++               << ",\"center_id\":" << center_id
++               << ",\"grid_id\":" << grid_id
++               << ",\"center_type\":" << center_type
++               << ",\"is_hull\":" << (is_hull ? 1 : 0)
++               << ",\"support_digest_hash\":"
++               << static_cast<uint64_t>(prctGoalEvidenceHash(assigned))
++               << ",\"map_version\":" << currentMapVersion()
++               << ",\"reallocation_reason\":\"c2_allocation\"";
++        logTaskLedgerEvent("task_bind", ledger.str());
++      }
+     }
+   };
+*** End Patch

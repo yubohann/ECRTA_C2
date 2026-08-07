@@ -1,0 +1,9 @@
+﻿*** Begin Patch
+*** Update File: //wsl$/Ubuntu/home/c2dev/c2_explorer_reproduction/workspace/reachability_retry_c2_method/src/swarm_exploration/exploration_manager/src/c2_exploration_manager.cpp
+@@
+-  if (prct_enable_retry_suppression_ && prct_backoff_enabled_) {
++  const bool quarantine_release_enabled =
++      (prct_enable_retry_suppression_ && prct_backoff_enabled_) ||
++      method_mode_ == "reach" || method_mode_ == "svr";
++  if (quarantine_release_enabled) {
+*** End Patch

@@ -1,0 +1,18 @@
+﻿*** Begin Patch
+*** Update File: C:/Users/Administrator/_public_repos/ECRTA_C2/scripts/run_scene_pilot.sh
+@@
+ printf 'prct_evict_on_first_failure=%s\n' "$prct_evict_on_first_failure" >> "$run_dir/run_manifest.txt"
+ printf 'prct_eviction_max_extra_cost=%s\n' "$prct_eviction_max_extra_cost" >> "$run_dir/run_manifest.txt"
++printf 'method_mode=%s\nreach_risk_weight=%s\nreach_risk_penalty=%s\nsteer_goal_min_hold_s=%s\nsteer_switch_margin=%s\nsteer_load_bias=%s\nsvr_reallocation_cost_m=%s\nsvr_solver_cost_s=%s\n' \
++  "$method_mode" "$reach_risk_weight" "$reach_risk_penalty" "$steer_goal_min_hold_s" "$steer_switch_margin" "$steer_load_bias" "$svr_reallocation_cost_m" "$svr_solver_cost_s" >> "$run_dir/run_manifest.txt"
+ printf 'prct_enable_peer_takeover=%s\nprct_peer_cert_wait_s=%s\nprct_peer_handoff_timeout_s=%s\nprct_peer_state_max_age_s=%s\n' \
+@@
+ launch_args+=("prct_local_evidence_radius_m:=$prct_local_evidence_radius_m")
+ launch_args+=("prct_evict_on_first_failure:=$prct_evict_on_first_failure")
+ launch_args+=("prct_eviction_max_extra_cost:=$prct_eviction_max_extra_cost")
++launch_args+=("method_mode:=$method_mode")
++launch_args+=("reach_risk_weight:=$reach_risk_weight" "reach_risk_penalty:=$reach_risk_penalty")
++launch_args+=("steer_goal_min_hold_s:=$steer_goal_min_hold_s" "steer_switch_margin:=$steer_switch_margin" "steer_load_bias:=$steer_load_bias")
++launch_args+=("svr_reallocation_cost_m:=$svr_reallocation_cost_m" "svr_solver_cost_s:=$svr_solver_cost_s")
+ launch_args+=("prct_enable_peer_takeover:=$prct_enable_peer_takeover" \
+*** End Patch

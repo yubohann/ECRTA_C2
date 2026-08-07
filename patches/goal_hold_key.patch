@@ -1,0 +1,21 @@
+﻿*** Begin Patch
+*** Update File: //wsl$/Ubuntu/home/c2dev/c2_explorer_reproduction/workspace/reachability_retry_c2_method/src/swarm_exploration/exploration_manager/src/c2_exploration_manager.cpp
+@@
+-    const auto goal_set_it = task_goal_set_wall_s_.find(frontier_id);
++    std::ostringstream goal_key;
++    goal_key << std::fixed << std::setprecision(1)
++             << std::round(goal.x() * 10.0) / 10.0 << ","
++             << std::round(goal.y() * 10.0) / 10.0 << ","
++             << std::round(goal.z() * 10.0) / 10.0
++             << ",m=" << currentMapVersion();
++    const std::string goal_hold_key = goal_key.str();
++    const auto goal_set_it = task_goal_set_wall_s_.find(frontier_id);
++    const auto goal_set_by_coord_it = task_goal_set_by_coord_wall_s_.find(goal_hold_key);
+     const bool hold_required = methodSteerActive() && steer_goal_min_hold_s_ > 0.0 &&
+-        goal_set_it != task_goal_set_wall_s_.end() &&
+-        now_wall_s - goal_set_it->second < steer_goal_min_hold_s_;
++        ((goal_set_it != task_goal_set_wall_s_.end() &&
++          now_wall_s - goal_set_it->second < steer_goal_min_hold_s_) ||
++         (goal_set_by_coord_it != task_goal_set_by_coord_wall_s_.end() &&
++          now_wall_s - goal_set_by_coord_it->second < steer_goal_min_hold_s_));
+*** End Patch

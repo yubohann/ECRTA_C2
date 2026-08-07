@@ -1,0 +1,15 @@
+﻿*** Begin Patch
+*** Update File: //wsl$/Ubuntu/home/c2dev/c2_explorer_reproduction/workspace/reachability_retry_c2_method/src/swarm_exploration/exploration_manager/src/c2_exploration_manager.cpp
+@@
+   ed_->next_pos_ = next_pos;
+   ed_->next_yaw_ = next_yaw;
+   telemetry_active_frontier_id_ = selected_frontier_id;
++  task_goal_set_wall_s_[selected_frontier_id] = ros::WallTime::now().toSec();
++  logCommandEvent("goal_set",
++      "\"frontier_id\":" + std::to_string(selected_frontier_id) +
++          ",\"goal_x\":" + std::to_string(next_pos.x()) +
++          ",\"goal_y\":" + std::to_string(next_pos.y()) +
++          ",\"goal_z\":" + std::to_string(next_pos.z()));
+ 
+   // This only records the decision already made above. The expected plan sequence
+*** End Patch

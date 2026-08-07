@@ -1,0 +1,20 @@
+﻿*** Begin Patch
+*** Update File: //wsl$/Ubuntu/home/c2dev/c2_explorer_reproduction/workspace/reachability_retry_c2_method/src/swarm_exploration/exploration_manager/src/c2_exploration_manager.cpp
+@@
+   if (suppression_active) {
+     const double now_wall_s = ros::WallTime::now().toSec();
+     const bool quarantine_mode =
+         prct_backoff_enabled_ || method_mode_ == "reach" || method_mode_ == "svr";
+     const int effective_threshold =
+         methodSuppressionActive()
+             ? methodRepeatThreshold()
+             : ((quarantine_mode && prct_evict_on_first_failure_) ? 1 : prct_repeat_threshold_);
++    const auto goal_set_it = task_goal_set_wall_s_.find(frontier_id);
++    const bool hold_required = methodSteerActive() && steer_goal_min_hold_s_ > 0.0 &&
++        goal_set_it != task_goal_set_wall_s_.end() &&
++        now_wall_s - goal_set_it->second < steer_goal_min_hold_s_;
++    const bool below_method_threshold = methodSuppressionActive() &&
++        repeatCountForTarget(frontier_id, goal) < methodRepeatThreshold();
++    if (hold_required && below_method_threshold) return false;
+     const auto fit = prct_frontier_cooldowns_.find(frontier_id);
+*** End Patch

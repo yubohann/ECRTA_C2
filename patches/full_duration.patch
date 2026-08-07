@@ -1,0 +1,18 @@
+﻿*** Begin Patch
+*** Update File: C:/Users/Administrator/_public_repos/ECRTA_C2/scripts/run_scene_pilot.sh
+@@
+ svr_reallocation_cost_m="${SVR_REALLOCATION_COST_M:-2.0}"
+ svr_solver_cost_s="${SVR_SOLVER_COST_S:-0.5}"
++run_full_duration="${PRCT_RUN_FULL_DURATION:-false}"
+ 
+ case "$method_mode" in
+@@
+   if [[ "$finish_count" -ge "$drone_num" ]]; then
+     completion_observed_all=1
+-    break
++    if [[ "$run_full_duration" != "true" ]]; then
++      break
++    fi
+   fi
+ done
+*** End Patch

@@ -1,0 +1,21 @@
+﻿*** Begin Patch
+*** Update File: //wsl$/Ubuntu/home/c2dev/c2_explorer_reproduction/workspace/reachability_retry_c2_method/src/swarm_exploration/exploration_manager/src/c2_exploration_manager.cpp
+@@
+     const double marginal_cost = best_alt_cost - first_cost;
+     const bool replacement_acceptable =
+         best_alt_id >= 0 &&
+-        marginal_cost <= prct_eviction_max_extra_cost_;
++        (methodSteerActive()
++             ? marginal_cost <= steer_switch_margin_
++             : marginal_cost <= prct_eviction_max_extra_cost_);
+     if (replacement_acceptable) {
+@@
+       logTelemetryEvent("prct_eviction_triggered", fields.str());
++      logCommandEvent("goal_switch",
++          "\"reason\":\"confirmed_blocked\",\"from_frontier_id\":" +
++              std::to_string(first_id) + ",\"to_frontier_id\":" +
++              std::to_string(best_alt_id) + ",\"marginal_cost\":" +
++              std::to_string(marginal_cost) + ",\"switch_margin\":" +
++              std::to_string(methodSteerActive() ? steer_switch_margin_
++                                                 : prct_eviction_max_extra_cost_));
+*** End Patch

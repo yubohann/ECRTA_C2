@@ -1,0 +1,36 @@
+﻿*** Begin Patch
+*** Update File: //wsl$/Ubuntu/home/c2dev/c2_explorer_reproduction/workspace/reachability_retry_c2_method/src/swarm_exploration/exploration_manager/src/c2_exploration_manager.cpp
+@@
+   nh.param("exploration/prct_evict_on_first_failure", prct_evict_on_first_failure_, true);
+   nh.param("exploration/prct_eviction_max_extra_cost", prct_eviction_max_extra_cost_, 20.0);
++  std::string method_mode;
++  nh.param<std::string>("exploration/method_mode", method_mode, std::string("baseline"));
++  ros::param::param<std::string>("/method_mode", method_mode, method_mode);
++  if (method_mode != "suppress" && method_mode != "reach" &&
++      method_mode != "svr" && method_mode != "steer") {
++    method_mode = "baseline";
++  }
++  method_mode_ = method_mode;
++  nh.param("exploration/reach_risk_weight", reach_risk_weight_, 0.25);
++  nh.param("exploration/reach_risk_penalty", reach_risk_penalty_, 1.0);
++  nh.param("exploration/steer_goal_min_hold_s", steer_goal_min_hold_s_, 3.0);
++  nh.param("exploration/steer_switch_margin", steer_switch_margin_, 0.2);
++  nh.param("exploration/steer_load_bias", steer_load_bias_, 0.1);
++  nh.param("exploration/svr_reallocation_cost_m", svr_reallocation_cost_m_, 2.0);
++  nh.param("exploration/svr_solver_cost_s", svr_solver_cost_s_, 0.5);
+   ros::param::param("/prct_backoff_initial_s", prct_backoff_initial_s_, prct_backoff_initial_s_);
+@@
+   if (telemetry_dir != nullptr && telemetry_dir[0] != '\0') {
+     telemetry_dir_ = telemetry_dir;
+     telemetry_path_ = std::string(telemetry_dir) + "/telemetry_drone_" +
+         std::to_string(ep_->drone_id_) + ".jsonl";
++    method_telemetry_enabled_ = true;
++    failures_telemetry_path_ = std::string(telemetry_dir) + "/failures.jsonl";
++    task_ledger_telemetry_path_ = std::string(telemetry_dir) + "/task_events.jsonl";
++    command_telemetry_path_ = std::string(telemetry_dir) + "/command_events.jsonl";
++    method_telemetry_path_ = std::string(telemetry_dir) + "/method_events.jsonl";
+   }
+   logTelemetryEvent("initialize", "\"drone_num\":" + std::to_string(ep_->drone_num_));
++  logMethodEvent("mode_initialized",
++      "\"suppression_active\":" + std::to_string(methodSuppressionActive() ? 1 : 0));
+*** End Patch

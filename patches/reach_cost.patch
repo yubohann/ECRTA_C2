@@ -1,0 +1,34 @@
+﻿*** Begin Patch
+*** Update File: //wsl$/Ubuntu/home/c2dev/c2_explorer_reproduction/workspace/reachability_retry_c2_method/src/swarm_exploration/exploration_manager/src/c2_exploration_manager.cpp
+@@
+   // getSwarmCostMatrix costs between frontiers.
+   frontier_finder_->getSwarmCostMatrix(positions, velocities, yaws, valid_ftr_ids, grid_pos, mat);
+   const int dimension = mat.rows();
++  if (methodReachActive() && dimension >= 2) {
++    int risk_adjusted_edges = 0;
++    std::ostringstream reach_fields;
++    reach_fields << std::setprecision(17)
++                 << "\"frontier_count\":" << valid_ftr_ids.size();
++    for (int fi = 0; fi < static_cast<int>(valid_ftr_ids.size()); ++fi) {
++      const int fid = valid_ftr_ids[fi];
++      if (fid < 0 || fid >= static_cast<int>(ed_->points_.size())) continue;
++      const double risk = methodExecutionRisk(fid, ed_->points_[fid]);
++      if (risk <= 0.0) continue;
++      const double factor = 1.0 + reach_risk_weight_ * risk;
++      const int row_col = 1 + fi;
++      for (int j = 0; j < dimension; ++j) {
++        if (j != row_col && std::isfinite(mat(row_col, j))) {
++          mat(row_col, j) *= factor;
++          ++risk_adjusted_edges;
++        }
++        if (j != row_col && std::isfinite(mat(j, row_col))) {
++          mat(j, row_col) *= factor;
++          ++risk_adjusted_edges;
++        }
++      }
++    }
++    reach_fields << ",\"risk_adjusted_edges\":" << risk_adjusted_edges;
++    logMethodEvent("reach_cost_adjustment", reach_fields.str());
++  }
+   // std::cout << "dim of frontier TSP mat: " << dimension << std::endl;
+*** End Patch

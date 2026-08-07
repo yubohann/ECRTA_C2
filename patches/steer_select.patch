@@ -1,0 +1,21 @@
+﻿*** Begin Patch
+*** Update File: //wsl$/Ubuntu/home/c2dev/c2_explorer_reproduction/workspace/reachability_retry_c2_method/src/swarm_exploration/exploration_manager/src/c2_exploration_manager.cpp
+@@
+     double min_cost = 100000;
+     int min_cost_id = -1;
+     bool used_all_cooled_fallback = false;
+     for (int i = 0; i < ed_->points_.size(); ++i) {
+       if (isPrctTargetCooled(i, ed_->points_[i])) continue;
+-      vector<Eigen::Vector3d> path;
+-      double cost = ViewNode::computeCost(
+-          grid_center, ed_->averages_[i], 0, 0, Eigen::Vector3d(0, 0, 0), 0, path);
++      double cost = methodSteerActive()
++          ? methodSteerCandidateScore(grid_center, i, ed_->points_[i])
++          : ViewNode::computeCost(
++                grid_center, ed_->averages_[i], 0, 0,
++                Eigen::Vector3d(0, 0, 0), 0, path);
+       if (ViewNode::isUnreachableCost(cost)) {
+         // ROS_ERROR("No frontier in assigned grid, frontier %d unreachable", i);
+         continue;
+       }
+*** End Patch

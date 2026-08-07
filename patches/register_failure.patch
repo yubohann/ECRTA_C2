@@ -1,0 +1,77 @@
+﻿*** Begin Patch
+*** Update File: //wsl$/Ubuntu/home/c2dev/c2_explorer_reproduction/workspace/reachability_retry_c2_method/src/swarm_exploration/exploration_manager/src/c2_exploration_manager.cpp
+@@
+ double C2ExplorationManager::prctFailureCooldownS(const int repeat_count) const {
+   (void) repeat_count;
++  if (methodSuppressionActive()) return methodCooldownS();
+   if (prct_backoff_enabled_) return std::numeric_limits<double>::max();
+   return prct_cooldown_s_;
+ }
+ 
+ void C2ExplorationManager::registerPrctFailure(
+     const int frontier_id, const Vector3d& goal) {
+   if (frontier_id < 0) return;
+   const uint64_t map_version = currentMapVersion();
+   const std::string key = prctCooldownKey(frontier_id, goal, map_version);
+   const bool c3_active = c3MarginalGateActive();
++  const bool method_suppression = methodSuppressionActive();
+   if (c3_active) {
+-    if (prct_enable_retry_suppression_) {
++    if (prct_enable_retry_suppression_ || method_suppression) {
+       auto& entry = prct_cooldowns_[key];
+       const uint64_t current_evidence =
+           prct_backoff_enabled_ ? prctGoalEvidenceHash(goal) : 0;
+       if (prct_backoff_enabled_ && entry.goal_evidence_hash != 0 &&
+           current_evidence != entry.goal_evidence_hash) {
+         entry.repeat_count = 0;
+       }
+       ++entry.repeat_count;
++      if (method_suppression && entry.repeat_count > methodRepeatThreshold()) {
++        entry.repeat_count = methodRepeatThreshold();
++      }
+       entry.map_version = map_version;
+       entry.goal = goal;
+       entry.goal_evidence_hash = current_evidence;
+@@
+       ++frontier_entry.repeat_count;
++      if (method_suppression && frontier_entry.repeat_count > methodRepeatThreshold()) {
++        frontier_entry.repeat_count = methodRepeatThreshold();
++      }
+       frontier_entry.map_version = map_version;
+       frontier_entry.goal = goal;
+       frontier_entry.goal_evidence_hash = entry.goal_evidence_hash;
+@@
+     logTelemetryEvent("c3_failure_repeat_register", fields.str());
++    logFailureEvent(frontier_id, goal, map_version,
++        c3_failure_repeat_counts_[key], "open_set_exhausted");
+     return;
+   }
+-  if (!prct_enable_retry_suppression_) return;
++  if (!prct_enable_retry_suppression_ && !method_suppression) return;
+   auto& entry = prct_cooldowns_[key];
+   const uint64_t current_evidence =
+       prct_backoff_enabled_ ? prctGoalEvidenceHash(goal) : 0;
+@@
+   }
+   ++entry.repeat_count;
++  if (method_suppression && entry.repeat_count > methodRepeatThreshold()) {
++    entry.repeat_count = methodRepeatThreshold();
++  }
+   entry.map_version = map_version;
+   entry.goal = goal;
+   entry.goal_evidence_hash = current_evidence;
+@@
+   ++frontier_entry.repeat_count;
++  if (method_suppression && frontier_entry.repeat_count > methodRepeatThreshold()) {
++    frontier_entry.repeat_count = methodRepeatThreshold();
++  }
+   frontier_entry.map_version = map_version;
+   frontier_entry.goal = goal;
+   frontier_entry.goal_evidence_hash = entry.goal_evidence_hash;
+   frontier_entry.cooldown_until_wall_s =
+       prct_backoff_enabled_ ? std::numeric_limits<double>::max()
+                             : ros::WallTime::now().toSec() +
+                                       prctFailureCooldownS(frontier_entry.repeat_count);
++  logFailureEvent(frontier_id, goal, map_version, entry.repeat_count, "open_set_exhausted");
+ }
+*** End Patch

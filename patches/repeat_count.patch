@@ -1,0 +1,35 @@
+﻿*** Begin Patch
+*** Update File: //wsl$/Ubuntu/home/c2dev/c2_explorer_reproduction/workspace/reachability_retry_c2_method/src/swarm_exploration/exploration_manager/src/c2_exploration_manager.cpp
+@@
+ double C2ExplorationManager::methodExecutionRisk(
+     const int frontier_id, const Vector3d& goal) const {
+   if (!methodReachActive() && !methodSteerActive()) return 0.0;
+   if (frontier_id < 0) return 0.0;
+   const std::string key = prctCooldownKey(frontier_id, goal, currentMapVersion());
+   int repeat = 0;
+   const auto it = prct_cooldowns_.find(key);
+   if (it != prct_cooldowns_.end()) repeat = it->second.repeat_count;
+   const auto fit = prct_frontier_cooldowns_.find(frontier_id);
+   if (fit != prct_frontier_cooldowns_.end()) {
+     repeat = std::max(repeat, fit->second.repeat_count);
+   }
+   if (repeat <= 0) return 0.0;
+   const double rho = std::min(1.0, static_cast<double>(repeat) / 6.0);
+   return rho;
+ }
++
++int C2ExplorationManager::repeatCountForTarget(
++    const int frontier_id, const Vector3d& goal) const {
++  int repeat = 0;
++  const auto it = prct_cooldowns_.find(
++      prctCooldownKey(frontier_id, goal, currentMapVersion()));
++  if (it != prct_cooldowns_.end()) repeat = it->second.repeat_count;
++  const auto fit = prct_frontier_cooldowns_.find(frontier_id);
++  if (fit != prct_frontier_cooldowns_.end()) {
++    repeat = std::max(repeat, fit->second.repeat_count);
++  }
++  return repeat;
++}
+ 
+ double C2ExplorationManager::methodSteerCandidateScore(
+*** End Patch

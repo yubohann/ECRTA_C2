@@ -1,0 +1,16 @@
+﻿*** Begin Patch
+*** Update File: //wsl$/Ubuntu/home/c2dev/c2_explorer_reproduction/workspace/reachability_retry_c2_method/src/swarm_exploration/exploration_manager/src/c2_exploration_manager.cpp
+@@
+   ed_->next_pos_ = next_pos;
+   ed_->next_yaw_ = next_yaw;
+   telemetry_active_frontier_id_ = selected_frontier_id;
+   task_goal_set_wall_s_[selected_frontier_id] = ros::WallTime::now().toSec();
++  std::ostringstream goal_hold_key;
++  goal_hold_key << std::fixed << std::setprecision(1)
++                << std::round(next_pos.x() * 10.0) / 10.0 << ","
++                << std::round(next_pos.y() * 10.0) / 10.0 << ","
++                << std::round(next_pos.z() * 10.0) / 10.0
++                << ",m=" << currentMapVersion();
++  task_goal_set_by_coord_wall_s_[goal_hold_key.str()] = ros::WallTime::now().toSec();
+   logCommandEvent("goal_set",
+*** End Patch

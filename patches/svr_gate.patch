@@ -1,0 +1,18 @@
+﻿*** Begin Patch
+*** Update File: //wsl$/Ubuntu/home/c2dev/c2_explorer_reproduction/workspace/reachability_retry_c2_method/src/swarm_exploration/exploration_manager/src/c2_exploration_manager.cpp
+@@
+   logTelemetryEvent("allocation_result", "\"allocation_seq\":" +
+       std::to_string(allocation_seq) + ",\"success\":true,\"assigned_center_count\":" +
+       std::to_string(assigned_center_count));
++  if (methodSvrActive()) {
++    logMethodEvent("svr_reallocation_gate",
++        "\"allocation_seq\":" + std::to_string(allocation_seq) +
++            ",\"candidate_count\":" + std::to_string(use_center_num) +
++            ",\"drone_count\":" + std::to_string(drone_num) +
++            ",\"assigned_center_count\":" + std::to_string(assigned_center_count) +
++            ",\"solver_overhead_s\":" + std::to_string(svr_solver_cost_s_) +
++            ",\"reallocation_cost_m\":" + std::to_string(svr_reallocation_cost_m_) +
++            ",\"decision\":\"original_allocator_invoked\"");
++  }
+ }
+*** End Patch

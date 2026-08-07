@@ -1,0 +1,133 @@
+﻿*** Begin Patch
+*** Update File: //wsl$/Ubuntu/home/c2dev/c2_explorer_reproduction/workspace/reachability_retry_c2_method/src/swarm_exploration/exploration_manager/src/c2_exploration_manager.cpp
+@@
+ void C2ExplorationManager::snapshotTelemetryFile(
+     const std::string& source_path, const std::string& snapshot_name) const {
+   if (telemetry_dir_.empty()) return;
+   std::ifstream source(source_path, std::ios::binary);
+   if (!source.is_open()) return;
+   std::ofstream target(telemetry_dir_ + "/" + snapshot_name, std::ios::binary | std::ios::trunc);
+   if (!target.is_open()) return;
+   target << source.rdbuf();
+ }
++
++bool C2ExplorationManager::methodSuppressionActive() const {
++  return method_mode_ == "suppress" || method_mode_ == "reach" ||
++         method_mode_ == "svr" || method_mode_ == "steer";
++}
++
++int C2ExplorationManager::methodRepeatThreshold() const {
++  if (method_mode_ == "steer" || method_mode_ == "reach") return 3;
++  if (method_mode_ == "svr") return 4;
++  if (method_mode_ == "suppress") return 2;
++  return prct_repeat_threshold_;
++}
++
++double C2ExplorationManager::methodCooldownS() const {
++  if (method_mode_ == "suppress") return 5.0;
++  if (method_mode_ == "reach" || method_mode_ == "steer" || method_mode_ == "svr") {
++    return std::numeric_limits<double>::max();
++  }
++  return prct_cooldown_s_;
++}
++
++void C2ExplorationManager::logTelemetryFile(
++    const std::string& filename, const std::string& line) const {
++  if (telemetry_dir_.empty() || !method_telemetry_enabled_) return;
++  const std::string path = telemetry_dir_ + "/" + filename;
++  std::ofstream out(path, std::ios::app | std::ios::out);
++  if (!out.is_open()) return;
++  out << line;
++  if (line.empty() || line.back() != '\n') out << "\n";
++}
++
++void C2ExplorationManager::logFailureEvent(
++    const int frontier_id, const Vector3d& goal, const uint64_t map_version,
++    const int repeat_count, const std::string& reason) const {
++  std::ostringstream out;
++  out << std::setprecision(17)
++      << "{\"wall_s\":" << ros::WallTime::now().toSec()
++      << ",\"drone_id\":" << (ep_ ? ep_->drone_id_ : -1)
++      << ",\"frontier_id\":" << frontier_id
++      << ",\"map_version\":" << map_version
++      << ",\"repeat_count\":" << repeat_count
++      << ",\"reason\":\"" << reason << "\""
++      << ",\"goal_x\":" << goal.x()
++      << ",\"goal_y\":" << goal.y()
++      << ",\"goal_z\":" << goal.z() << "}";
++  logTelemetryFile("failures.jsonl", out.str());
++}
++
++void C2ExplorationManager::logCommandEvent(
++    const std::string& event, const std::string& fields) const {
++  std::ostringstream out;
++  out << std::setprecision(17)
++      << "{\"wall_s\":" << ros::WallTime::now().toSec()
++      << ",\"drone_id\":" << (ep_ ? ep_->drone_id_ : -1)
++      << ",\"event\":\"" << event << "\"";
++  if (!fields.empty()) out << "," << fields;
++  out << "}";
++  logTelemetryFile("command_events.jsonl", out.str());
++}
++
++void C2ExplorationManager::logMethodEvent(
++    const std::string& event, const std::string& fields) const {
++  std::ostringstream out;
++  out << std::setprecision(17)
++      << "{\"wall_s\":" << ros::WallTime::now().toSec()
++      << ",\"drone_id\":" << (ep_ ? ep_->drone_id_ : -1)
++      << ",\"method_mode\":\"" << method_mode_ << "\""
++      << ",\"event\":\"" << event << "\"";
++  if (!fields.empty()) out << "," << fields;
++  out << "}";
++  logTelemetryFile("method_events.jsonl", out.str());
++}
++
++void C2ExplorationManager::logTaskLedgerEvent(
++    const std::string& event, const std::string& fields) const {
++  std::ostringstream out;
++  out << std::setprecision(17)
++      << "{\"wall_s\":" << ros::WallTime::now().toSec()
++      << ",\"drone_id\":" << (ep_ ? ep_->drone_id_ : -1)
++      << ",\"event\":\"" << event << "\"";
++  if (!fields.empty()) out << "," << fields;
++  out << "}";
++  logTelemetryFile("task_events.jsonl", out.str());
++}
++
++double C2ExplorationManager::methodExecutionRisk(
++    const int frontier_id, const Vector3d& goal) const {
++  if (!methodReachActive() && !methodSteerActive()) return 0.0;
++  if (frontier_id < 0) return 0.0;
++  const std::string key = prctCooldownKey(frontier_id, goal, currentMapVersion());
++  int repeat = 0;
++  const auto it = prct_cooldowns_.find(key);
++  if (it != prct_cooldowns_.end()) repeat = it->second.repeat_count;
++  const auto fit = prct_frontier_cooldowns_.find(frontier_id);
++  if (fit != prct_frontier_cooldowns_.end()) {
++    repeat = std::max(repeat, fit->second.repeat_count);
++  }
++  if (repeat <= 0) return 0.0;
++  const double rho = std::min(1.0, static_cast<double>(repeat) / 6.0);
++  return rho;
++}
++
++double C2ExplorationManager::methodSteerCandidateScore(
++    const Vector3d& reference, const int frontier_id, const Vector3d& goal) const {
++  vector<Eigen::Vector3d> path;
++  const double nominal = ViewNode::computeCost(
++      reference, goal, 0, 0, Eigen::Vector3d(0, 0, 0), 0, path);
++  if (ViewNode::isUnreachableCost(nominal)) {
++    return std::numeric_limits<double>::max();
++  }
++  const double risk = methodExecutionRisk(frontier_id, goal);
++  double load = 0.0;
++  if (ed_ && ep_ && ep_->drone_id_ > 0 &&
++      ep_->drone_id_ <= static_cast<int>(ed_->swarm_state_.size())) {
++    load = static_cast<double>(
++        ed_->swarm_state_[ep_->drone_id_ - 1].center_positions_.size());
++  }
++  return nominal * (1.0 + steer_load_bias_ * load + reach_risk_weight_ * risk) +
++         reach_risk_penalty_ * risk;
++}
+*** End Patch

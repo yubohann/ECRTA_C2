@@ -47,6 +47,28 @@ prct_backoff_max_s="${31:-30.0}"
 prct_backoff_factor="${32:-2.0}"
 prct_backoff_enabled="${33:-false}"
 prct_local_evidence_radius_m="${34:-0.2}"
+prct_evict_on_first_failure="${35:-true}"
+prct_eviction_max_extra_cost="${36:-20.0}"
+method_mode="${METHOD_MODE:-baseline}"
+reach_risk_weight="${REACH_RISK_WEIGHT:-0.25}"
+reach_risk_penalty="${REACH_RISK_PENALTY:-1.0}"
+steer_goal_min_hold_s="${STEER_GOAL_MIN_HOLD_S:-3.0}"
+steer_switch_margin="${STEER_SWITCH_MARGIN:-0.2}"
+steer_load_bias="${STEER_LOAD_BIAS:-0.1}"
+svr_reallocation_cost_m="${SVR_REALLOCATION_COST_M:-2.0}"
+svr_solver_cost_s="${SVR_SOLVER_COST_S:-0.5}"
+run_full_duration="${PRCT_RUN_FULL_DURATION:-false}"
+
+case "$method_mode" in
+  baseline|suppress|reach|svr|steer) ;;
+  *) echo "METHOD_MODE must be baseline|suppress|reach|svr|steer" >&2; exit 64 ;;
+esac
+for method_numeric in "$reach_risk_weight" "$reach_risk_penalty" "$steer_goal_min_hold_s" "$steer_switch_margin" "$steer_load_bias" "$svr_reallocation_cost_m" "$svr_solver_cost_s"; do
+  if ! [[ "$method_numeric" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+    echo "method numeric params must be non-negative numbers" >&2
+    exit 64
+  fi
+done
 
 if ! [[ "$reachability_shadow_max_candidates" =~ ^[0-9]+$ ]]; then
   echo "reachability_shadow_max_candidates must be a non-negative integer" >&2
@@ -92,6 +114,14 @@ if [[ "$prct_backoff_enabled" != "true" && "$prct_backoff_enabled" != "false" ]]
 fi
 if ! [[ "$prct_local_evidence_radius_m" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
   echo "prct_local_evidence_radius_m must be a non-negative number" >&2
+  exit 64
+fi
+if [[ "$prct_evict_on_first_failure" != "true" && "$prct_evict_on_first_failure" != "false" ]]; then
+  echo "prct_evict_on_first_failure must be true or false" >&2
+  exit 64
+fi
+if ! [[ "$prct_eviction_max_extra_cost" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+  echo "prct_eviction_max_extra_cost must be a non-negative number" >&2
   exit 64
 fi
 if [[ "$prct_enable_peer_takeover" != "true" && "$prct_enable_peer_takeover" != "false" ]]; then
@@ -163,6 +193,10 @@ printf 'prct_enable_retry_suppression=%s\nprct_repeat_threshold=%s\nprct_cooldow
 printf 'prct_backoff_initial_s=%s\nprct_backoff_max_s=%s\nprct_backoff_factor=%s\n' \
   "$prct_backoff_initial_s" "$prct_backoff_max_s" "$prct_backoff_factor" >> "$run_dir/run_manifest.txt"
 printf 'prct_local_evidence_radius_m=%s\n' "$prct_local_evidence_radius_m" >> "$run_dir/run_manifest.txt"
+printf 'prct_evict_on_first_failure=%s\n' "$prct_evict_on_first_failure" >> "$run_dir/run_manifest.txt"
+printf 'prct_eviction_max_extra_cost=%s\n' "$prct_eviction_max_extra_cost" >> "$run_dir/run_manifest.txt"
+printf 'method_mode=%s\nreach_risk_weight=%s\nreach_risk_penalty=%s\nsteer_goal_min_hold_s=%s\nsteer_switch_margin=%s\nsteer_load_bias=%s\nsvr_reallocation_cost_m=%s\nsvr_solver_cost_s=%s\n' \
+  "$method_mode" "$reach_risk_weight" "$reach_risk_penalty" "$steer_goal_min_hold_s" "$steer_switch_margin" "$steer_load_bias" "$svr_reallocation_cost_m" "$svr_solver_cost_s" >> "$run_dir/run_manifest.txt"
 printf 'prct_enable_peer_takeover=%s\nprct_peer_cert_wait_s=%s\nprct_peer_handoff_timeout_s=%s\nprct_peer_state_max_age_s=%s\n' \
   "$prct_enable_peer_takeover" "$prct_peer_cert_wait_s" "$prct_peer_handoff_timeout_s" \
   "$prct_peer_state_max_age_s" >> "$run_dir/run_manifest.txt"
@@ -171,6 +205,17 @@ printf 'c3_min_repeat_count=%s\nc3_owner_repeat_cost_s=%s\nc3_peer_cert_grace_s=
 printf 'telemetry_dir=%s\n' "$ECRTA_TELEMETRY_DIR" >> "$run_dir/run_manifest.txt"
 cp "$ECRTA_WORKSPACE/src/swarm_exploration/exploration_manager/launch/$launch_file" "$run_dir/config_snapshot/"
 cp "$ECRTA_WORKSPACE/src/swarm_exploration/exploration_manager/launch/single_drone_exploration.xml" "$run_dir/config_snapshot/"
+
+cleanup_stale_ros() {
+  pkill -f "/opt/ros/noetic/bin/rosmaster" 2>/dev/null || true
+  pkill -f "roslaunch exploration_manager" 2>/dev/null || true
+  pkill -f "exploration_node" 2>/dev/null || true
+  pkill -f "quadrotor_dynamics" 2>/dev/null || true
+  pkill -f "pcl_render_node" 2>/dev/null || true
+  pkill -f "opengl_render_node" 2>/dev/null || true
+  pkill -f "map_generator/map_pub" 2>/dev/null || true
+  sleep 2
+}
 
 capture_pre_shutdown_artifacts() {
   if [[ -f "$run_dir/roslaunch.log" && ! -f "$run_dir/launch_pre_shutdown.log" ]]; then
@@ -276,6 +321,12 @@ launch_args+=("prct_backoff_initial_s:=$prct_backoff_initial_s" \
   "prct_backoff_max_s:=$prct_backoff_max_s" "prct_backoff_factor:=$prct_backoff_factor" \
   "prct_backoff_enabled:=$prct_backoff_enabled")
 launch_args+=("prct_local_evidence_radius_m:=$prct_local_evidence_radius_m")
+launch_args+=("prct_evict_on_first_failure:=$prct_evict_on_first_failure")
+launch_args+=("prct_eviction_max_extra_cost:=$prct_eviction_max_extra_cost")
+launch_args+=("method_mode:=$method_mode")
+launch_args+=("reach_risk_weight:=$reach_risk_weight" "reach_risk_penalty:=$reach_risk_penalty")
+launch_args+=("steer_goal_min_hold_s:=$steer_goal_min_hold_s" "steer_switch_margin:=$steer_switch_margin" "steer_load_bias:=$steer_load_bias")
+launch_args+=("svr_reallocation_cost_m:=$svr_reallocation_cost_m" "svr_solver_cost_s:=$svr_solver_cost_s")
 launch_args+=("prct_enable_peer_takeover:=$prct_enable_peer_takeover" \
   "prct_peer_cert_wait_s:=$prct_peer_cert_wait_s" \
   "prct_peer_handoff_timeout_s:=$prct_peer_handoff_timeout_s" \
@@ -288,6 +339,7 @@ fi
 if (( reachability_peer_shadow_max_peers > 0 )); then
   launch_args+=("reachability_peer_shadow_max_peers:=$reachability_peer_shadow_max_peers")
 fi
+cleanup_stale_ros
 roslaunch exploration_manager "$launch_file" "${launch_args[@]}" > "$run_dir/roslaunch.log" 2>&1 &
 launch_pid=$!
 printf 'launch_pid=%s\nlaunch_command=roslaunch exploration_manager %s drone_num:=%s communication_threshold:=%s reachability_shadow_max_candidates:=%s reachability_peer_shadow_max_peers:=%s prct_enable_retry_suppression:=%s prct_backoff_enabled:=%s prct_repeat_threshold:=%s prct_cooldown_s:=%s prct_enable_peer_takeover:=%s prct_peer_cert_wait_s:=%s prct_peer_handoff_timeout_s:=%s prct_peer_state_max_age_s:=%s\n' \
@@ -299,7 +351,7 @@ printf 'launch_pid=%s\nlaunch_command=roslaunch exploration_manager %s drone_num
 printf 'c3_launch_args=c3_enable_marginal_gate:=%s c3_benefit_margin_s:=%s c3_trust_threshold:=%s c3_load_weight:=%s c3_handoff_overhead_s:=%s c3_trust_penalty_s:=%s c3_nominal_speed_m_s:=%s c3_owner_fallback_penalty_s:=%s c3_owner_stuck_alpha:=%s c3_min_repeat_count:=%s c3_owner_repeat_cost_s:=%s c3_peer_cert_grace_s:=%s c3_takeover_cooldown_s:=%s c3_max_takeover_attempts:=%s c3_takeover_completed_cooldown_s:=%s\n' "$c3_enable_marginal_gate" "$c3_benefit_margin_s" "$c3_trust_threshold" "$c3_load_weight" "$c3_handoff_overhead_s" "$c3_trust_penalty_s" "$c3_nominal_speed_m_s" "$c3_owner_fallback_penalty_s" "$c3_owner_stuck_alpha" "$c3_min_repeat_count" "$c3_owner_repeat_cost_s" "$c3_peer_cert_grace_s" "$c3_takeover_cooldown_s" "$c3_max_takeover_attempts" "$c3_takeover_completed_cooldown_s" >> "$run_dir/run_manifest.txt"
 
 ready=0
-for attempt in $(seq 1 30); do
+for attempt in $(seq 1 60); do
   rosnode list > "$run_dir/rosnode_list_${attempt}.txt" 2>&1 || true
   rostopic info /move_base_simple/goal > "$run_dir/trigger_topic_${attempt}.txt" 2>&1 || true
   node_count=$(grep -c '/quad_.*exploration_node_' "$run_dir/rosnode_list_${attempt}.txt" || true)
@@ -352,6 +404,8 @@ for prct_pair in "prct_enable_retry_suppression:$prct_enable_retry_suppression" 
                  "prct_backoff_max_s:$prct_backoff_max_s" \
                  "prct_backoff_factor:$prct_backoff_factor" \
                  "prct_local_evidence_radius_m:$prct_local_evidence_radius_m" \
+                 "prct_evict_on_first_failure:$prct_evict_on_first_failure" \
+                 "prct_eviction_max_extra_cost:$prct_eviction_max_extra_cost" \
                  "prct_enable_peer_takeover:$prct_enable_peer_takeover" \
                  "prct_peer_cert_wait_s:$prct_peer_cert_wait_s" \
                  "prct_peer_handoff_timeout_s:$prct_peer_handoff_timeout_s" \
@@ -480,7 +534,9 @@ while (( SECONDS < end_seconds )); do
     "$SECONDS" "$finish_count" "$log_finish_count" >> "$run_dir/completion_watch.log"
   if [[ "$finish_count" -ge "$drone_num" ]]; then
     completion_observed_all=1
-    break
+    if [[ "$run_full_duration" != "true" ]]; then
+      break
+    fi
   fi
 done
 stop_observers
