@@ -95,3 +95,10 @@ runner 启动后会把 /lkh_seed 写入参数服务器并校验，只有校验�
 - 成对实例原始日志与 rosbag；
 - ALL_METHODS_RANKING.md；
 - LIMITATIONS_AND_THREATS_TO_VALIDITY.md。
+
+-## 2026-08-07 v3 实现状态
+-
+- 已修正 STEER 切换门、SVR 候选集复用门、REACH 风险中心映射，并通过 `catkin_make -j2` 与 `verify_three_method_gate.sh`。
+- 新增方法参数：`reach_center_match_radius_m`（默认 5.0）、`svr_reuse_match_radius_m`（默认 5.0）。
+- `candidate_seed2_pilot_v3` 正在同一高失败实例上运行；该 pilot 只验证机制是否真正触发，不替代正式成对统计。
+- 结果出来后更新 `ALL_METHODS_RANKING.md`，并据此决定下一轮同时优化哪些方法。
