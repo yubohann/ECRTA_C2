@@ -118,6 +118,12 @@ def main():
         d = load_summary(run_dir)
         runs.setdefault(method, []).append(stats_key(d, method))
 
+    # R2: unfinished runs count as 180s truncated makespan.
+    for m, rows in runs.items():
+        for r in rows:
+            if r.get("makespan") is None and not r.get("missing"):
+                r["makespan"] = 180.0
+
     print(f"batch: {batch_root}")
     print(f"{'method':8s} {'n':>3s} {'finish_frac':>12s} {'makespan_med':>13s} "
           f"{'makespan_mean':>13s} {'astar_fail_med':>13s} {'astar_fail_sum':>14s} "
