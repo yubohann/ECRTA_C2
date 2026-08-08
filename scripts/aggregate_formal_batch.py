@@ -35,8 +35,10 @@ def stats_key(d, method, run_dir=None):
         lkh.get(k, {}).get("failure", 0) or 0 for k in ("ACVRP", "ATSP-frontier", "ATSP-grid")
     ) if isinstance(lkh, dict) else -1
     me = {}
+    traj_fail_raw = 0
     if run_dir is not None:
-        mf = Path(run_dir) / "method_events.jsonl"
+        rd = Path(run_dir)
+        mf = rd / "method_events.jsonl"
         if mf.is_file():
             for line in mf.read_text(encoding="utf-8").splitlines():
                 if not line.strip():
@@ -45,8 +47,24 @@ def stats_key(d, method, run_dir=None):
                     ev = json.loads(line)
                 except Exception:
                     continue
-                if isinstance(ev, dict) and ev.get("event"):
-                    me[ev["event"]] = me.get(ev["event"], 0) + 1
+                if not isinstance(ev, dict) or not ev.get("event"):
+                    continue
+                me[ev["event"]] = me.get(ev["event"], 0) + 1
+                if ev["event"] == "svr_reallocation_gate" and \
+                        ev.get("decision") == "reuse_previous_allocation":
+                    me["svr_reuse"] = me.get("svr_reuse", 0) + 1
+        # trajectory failures must be counted from the raw telemetry:
+        # telemetry_summary.json never carried a trajectory_failure field.
+        for tf in rd.glob("telemetry_drone_*.jsonl"):
+            for line in tf.read_text(encoding="utf-8").splitlines():
+                if '"traj_result"' not in line:
+                    continue
+                try:
+                    ev = json.loads(line)
+                except Exception:
+                    continue
+                if isinstance(ev, dict) and ev.get("success") is False:
+                    traj_fail_raw += 1
     return {
         "method": method,
         "run": d.get("run_dir", "?"),
@@ -54,7 +72,7 @@ def stats_key(d, method, run_dir=None):
         "finish": len(d.get("finish_drone_ids", []) or []),
         "makespan": d.get("local_finish_makespan_wall_s"),
         "astar_fail": astar.get("failure_diagnostic_count", 0) or 0,
-        "traj_fail": ec.get("trajectory_failure", 0) or 0,
+        "traj_fail": traj_fail_raw,
         "lkh_fail": lkh_fail,
         "json_err": d.get("json_parse_errors", 0) or 0,
         "reach_adjust": me.get("reach_cost_adjustment", 0) or 0,
@@ -202,9 +220,15 @@ def main():
             runs.setdefault(method, []).append(stats_key(d, method, run_dir))
 
     # Unfinished-but-valid runs count as truncated makespan (180s window).
+    # NOTE: local_finish_makespan_wall_s only spans *completed* drones
+    # (max(finish)-min(init)); a partially-finished run therefore reports a
+    # too-small value. Per protocol, any run with finish < drone_num is
+    # truncated to 180s.
     for m, rows in runs.items():
         for r in rows:
             if r.get("makespan") is None and not r.get("missing"):
+                r["makespan"] = 180.0
+            elif r.get("finish", 0) < drone_num and not r.get("missing"):
                 r["makespan"] = 180.0
             # Infra-quality flag: too little activity to be a valid sample
             # (e.g., WSLg render crash -> instant FINISH or no exploration).

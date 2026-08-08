@@ -22,7 +22,7 @@ def make_batch(tmp, methods, n, values, infra=None):
     infra: dict method -> set of indices to mark infra-suspect (overrides)."""
     infra = infra or {}
     root = Path(tmp)
-    batch = root / "batch_test"
+    batch = root / "uav_2" / "batch_test"
     batch.mkdir(parents=True)
     lines = ["method\tindex\trun_id\trun_exit\taudit_status\tfinish_count\tmakespan_s_proxy\trun_dir"]
     for i in range(1, n + 1):
@@ -148,10 +148,92 @@ def test_bootstrap_ci_sanity():
     print("PASS test_bootstrap_ci_sanity")
 
 
+def test_partial_finish_truncation():
+    """Partial-finish runs must be truncated to 180s (they only span
+    completed drones), not reported with their too-small makespan."""
+    with tempfile.TemporaryDirectory() as tmp:
+        all5 = ["b0", "b1", "reach", "svr", "steer"]
+        batch = make_batch(
+            tmp, all5, 2,
+            {
+                # b0 run2: fin=1 of 2 -> must be truncated to 180
+                "b0": [(70.0, 2, 5, 100), (60.0, 1, 5, 100)],
+                "b1": [(70.0, 2, 5, 100), (80.0, 2, 5, 100)],
+                "reach": [(70.0, 2, 5, 100), (80.0, 2, 5, 100)],
+                "svr": [(70.0, 2, 5, 100), (80.0, 2, 5, 100)],
+                "steer": [(70.0, 2, 5, 100), (80.0, 2, 5, 100)],
+            },
+        )
+        old_argv = sys.argv
+        sys.argv = [sys.argv[0], str(batch)]
+        try:
+            import io
+            from contextlib import redirect_stdout
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                agg.main()
+            out = buf.getvalue()
+        finally:
+            sys.argv = old_argv
+        # b0 valid makespans: [70, 180] -> median 125.0
+        b0_row = [l for l in out.splitlines() if l.startswith("b0 ")][0]
+        cols = b0_row.split()
+        assert "125.00" in cols, (cols, out)
+        assert "65.00" not in cols, (cols, out)
+        print("PASS test_partial_finish_truncation")
+
+
+def test_svr_reuse_and_traj_fail_from_raw():
+    """svr_reuse must be counted from gate decision fields; traj failures
+    from raw telemetry (summary never carried the field)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        batch = make_batch(
+            tmp, ["b0", "b1", "reach", "svr", "steer"], 1,
+            {
+                "b0": [(70.0, 2, 5, 100)],
+                "b1": [(70.0, 2, 5, 100)],
+                "reach": [(70.0, 2, 5, 100)],
+                "svr": [(70.0, 2, 5, 100)],
+                "steer": [(70.0, 2, 5, 100)],
+            },
+        )
+        # inject: svr gate with reuse decision + 3 traj_result failures
+        svr_dir = root / "three_test_svr_run_001"
+        (svr_dir / "method_events.jsonl").write_text(
+            json.dumps({"event": "svr_reallocation_gate",
+                        "decision": "reuse_previous_allocation"}) + "\n",
+            encoding="utf-8")
+        tele = svr_dir / "telemetry_drone_1.jsonl"
+        lines = [json.dumps({"event": "traj_result", "success": False}) for _ in range(3)]
+        lines.append(json.dumps({"event": "traj_result", "success": True}))
+        tele.write_text("\n".join(lines), encoding="utf-8")
+        old_argv = sys.argv
+        sys.argv = [sys.argv[0], str(batch)]
+        try:
+            import io
+            from contextlib import redirect_stdout
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                agg.main()
+            out = buf.getvalue()
+        finally:
+            sys.argv = old_argv
+        svr_row = [l for l in out.splitlines() if l.startswith("svr ")][0]
+        cols = svr_row.split()
+        # columns: ... traj_fail_sum reach_adj svr_gate svr_reuse ...
+        # svr row: ['svr','1','2/2','1.00','70.00','70.00','0','0','3','0','0','1','1',...]
+        assert "3" in cols, (cols, out)
+        assert cols.count("1") >= 2, (cols, out)  # svr_gate=1 and svr_reuse=1
+        print("PASS test_svr_reuse_and_traj_fail_from_raw")
+
+
 if __name__ == "__main__":
     test_main_table_excludes_infra()
     test_paired_by_index_not_sorted()
     test_wilcoxon_vs_known()
     test_mwu_sanity()
     test_bootstrap_ci_sanity()
+    test_partial_finish_truncation()
+    test_svr_reuse_and_traj_fail_from_raw()
     print("AGGREGATE TESTS DONE")
