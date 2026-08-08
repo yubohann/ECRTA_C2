@@ -86,35 +86,82 @@ def bootstrap_ci(diffs, n=10000, seed=7):
     return (means[int(0.025 * n)], means[int(0.975 * n)])
 
 
-def wilcoxon(a, b):
+def wilcoxon(a, b, n_perm=20000, seed=11):
+    """Two-sided signed-rank p via Monte-Carlo sign permutation (tie-safe).
+
+    The normal approximation is unreliable at n<=20 with heavy ties, so we
+    use the exact conditional distribution estimated by sign flipping.
+    """
     diffs = [x - y for x, y in zip(a, b) if x != y]
-    if not diffs:
-        return float("nan")
-    ranks = {v: 1 + i for i, v in enumerate(sorted(diffs))}
-    # handle ties crudely by average rank
+    n_ = len(diffs)
+    if n_ == 0:
+        return 1.0
+    ranks = {}
     sorted_diffs = sorted(diffs)
-    rank_map = {}
     i = 0
-    while i < len(sorted_diffs):
+    while i < n_:
         j = i
-        while j + 1 < len(sorted_diffs) and sorted_diffs[j + 1] == sorted_diffs[i]:
+        while j + 1 < n_ and sorted_diffs[j + 1] == sorted_diffs[i]:
             j += 1
         avg = (i + 1 + j + 1) / 2.0
         for k in range(i, j + 1):
-            rank_map[sorted_diffs[k]] = avg
+            ranks[sorted_diffs[k]] = avg
         i = j + 1
-    w_plus = sum(rank_map[v] for v in diffs if v > 0)
-    n_ = len(diffs)
-    exp = n_ * (n_ + 1) / 4.0
-    var = n_ * (n_ + 1) * (2 * n_ + 1) / 24.0
-    if var <= 0:
-        return 1.0
-    z = (w_plus - exp) / math.sqrt(var)
-    # two-sided normal approx
-    from math import erfc
-
-    p = erfc(abs(z) / math.sqrt(2))
+    w_obs = sum(ranks[v] for v in diffs if v > 0)
+    rng = random.Random(seed)
+    abs_ranks = [ranks[v] for v in diffs]
+    # Monte-Carlo null: random sign flips
+    count = 0
+    for _ in range(n_perm):
+        w = 0.0
+        for r in abs_ranks:
+            if rng.random() < 0.5:
+                w += r
+        if abs(w - n_ * (n_ + 1) / 4.0) >= abs(w_obs - n_ * (n_ + 1) / 4.0):
+            count += 1
+    p = (count + 1) / (n_perm + 1)
     return p
+
+
+def mann_whitney_u(a, b, n_perm=20000, seed=13):
+    """Two-sided unpaired Mann-Whitney U p via Monte-Carlo permutation.
+
+    The runs are repeated instances, not matched trials, so an unpaired test
+    is the more conservative default; the paired test is reported as well.
+    """
+    import statistics
+
+    def u_stat(x, y):
+        x = sorted(x)
+        y = sorted(y)
+        i = j = 0
+        u = 0.0
+        while i < len(x) and j < len(y):
+            if x[i] < y[j]:
+                u += len(y) - j
+                i += 1
+            else:
+                j += 1
+        return u
+
+    n_a, n_b = len(a), len(b)
+    if n_a == 0 or n_b == 0:
+        return 1.0
+    obs = u_stat(a, b)
+    pooled = list(a) + list(b)
+    rng = random.Random(seed)
+    ge = 0
+    le = 0
+    for _ in range(n_perm):
+        rng.shuffle(pooled)
+        uu = u_stat(pooled[:n_a], pooled[n_a:])
+        if uu >= obs:
+            ge += 1
+        if uu <= obs:
+            le += 1
+    # two-sided: 2 * min(one-sided p values), with continuity
+    p = 2.0 * min(ge, le) / (n_perm + 1)
+    return min(1.0, p)
 
 
 def main():
@@ -154,26 +201,28 @@ def main():
             d = load_summary(run_dir)
             runs.setdefault(method, []).append(stats_key(d, method, run_dir))
 
-    # R2: unfinished runs count as 180s truncated makespan.
+    # Unfinished-but-valid runs count as truncated makespan (180s window).
     for m, rows in runs.items():
         for r in rows:
             if r.get("makespan") is None and not r.get("missing"):
                 r["makespan"] = 180.0
-            # Infra-quality flag: too little activity to be a valid sample.
+            # Infra-quality flag: too little activity to be a valid sample
+            # (e.g., WSLg render crash -> instant FINISH or no exploration).
             r["infra_suspect"] = (
                 r.get("astar_diag", 0) == 0
                 and r.get("traj_request", 0) < 50
                 and r.get("finish", 0) == 0
             )
 
-    # Valid samples only (exclude infra-suspect); infra rate reported separately.
+    # Valid samples only; infra rate reported separately.
     valid = {}
     for m, rows in runs.items():
-        valid[m] = [r for r in rows if not r.get("infra_suspect") and not r.get("missing") and not r.get("parse_error")]
-    infra_counts = {m: sum(1 for r in rows if r.get("infra_suspect")) for m, rows in runs.items()}
+        valid[m] = [r for r in rows
+                    if not r.get("infra_suspect") and not r.get("missing")
+                    and not r.get("parse_error")]
+    infra_counts = {m: sum(1 for r in rows if r.get("infra_suspect"))
+                    for m, rows in runs.items()}
     print(f"infra_suspect (render crash, excluded): {infra_counts}")
-
-    rows = valid
 
     print(f"batch: {batch_root}")
     print(f"{'method':8s} {'n':>3s} {'finish_frac':>12s} {'makespan_med':>13s} "
@@ -184,7 +233,7 @@ def main():
     medians = {}
     makespan_lists = {}
     for m in methods:
-        rows = runs.get(m, [])
+        rows = valid.get(m, [])
         ms = sorted(r["makespan"] for r in rows
                     if r.get("makespan") is not None)
         af = sorted(r["astar_fail"] for r in rows)
@@ -193,7 +242,7 @@ def main():
         medians[m] = med
         makespan_lists[m] = ms
         n_finish = sum(1 for r in rows if r.get("finish", 0) == drone_num)
-        infra = sum(1 for r in rows if r.get("infra_suspect"))
+        infra = infra_counts.get(m, 0)
         print(
             f"{m:8s} {len(rows):3d} {n_finish}/{len(rows)}"
             f"{n_finish / len(rows):>11.2f} {med:13.2f} {mean:13.2f} "
@@ -209,41 +258,31 @@ def main():
             f"{infra:13d}"
         )
 
-    print("\npaired: method vs B1 (makespan, truncated 180s if missing):")
-    b1 = makespan_lists["b1"]
-    for m in methods:
-        if m == "b1":
-            continue
-        a = makespan_lists.get(m, [])
-        n = min(len(a), len(b1))
-        if n == 0:
-            continue
-        diffs = [a[i] - b1[i] for i in range(n)]
-        lo, hi = bootstrap_ci(diffs)
-        p = wilcoxon(a[:n], b1[:n])
-        wins = sum(1 for x in diffs if x < 0)
-        losses = sum(1 for x in diffs if x > 0)
-        print(f"{m:8s} vs B1: n={n:2d} wins={wins:2d} losses={losses:2d} "
-              f"median_diff={sorted(diffs)[n // 2]:+7.2f}s "
-              f"bootstrap95=[{lo:+7.2f},{hi:+7.2f}] wilcoxon_p={p:.4f}")
+    def paired_block(title, ref):
+        print(f"\npaired: {title} (makespan, truncated 180s if missing):")
+        ref_rows = valid.get(ref, [])
+        for m in methods:
+            if m == ref:
+                continue
+            rows = valid.get(m, [])
+            n = min(len(rows), len(ref_rows))
+            if n == 0:
+                continue
+            diffs = [rows[i]["makespan"] - ref_rows[i]["makespan"] for i in range(n)]
+            lo, hi = bootstrap_ci(diffs)
+            p_pair = wilcoxon([r["makespan"] for r in rows[:n]],
+                              [r["makespan"] for r in ref_rows[:n]])
+            p_unp = mann_whitney_u([r["makespan"] for r in rows[:n]],
+                                   [r["makespan"] for r in ref_rows[:n]])
+            wins = sum(1 for x in diffs if x < 0)
+            losses = sum(1 for x in diffs if x > 0)
+            print(f"{m:8s} vs {ref}: n={n:2d} wins={wins:2d} losses={losses:2d} "
+                  f"median_diff={sorted(diffs)[n // 2]:+7.2f}s "
+                  f"bootstrap95=[{lo:+7.2f},{hi:+7.2f}] "
+                  f"wilcoxon_perm_p={p_pair:.4f} mwu_perm_p={p_unp:.4f}")
 
-    print("\npaired: method vs B0:")
-    b0 = makespan_lists["b0"]
-    for m in methods:
-        if m == "b0":
-            continue
-        a = makespan_lists.get(m, [])
-        n = min(len(a), len(b0))
-        if n == 0:
-            continue
-        diffs = [a[i] - b0[i] for i in range(n)]
-        lo, hi = bootstrap_ci(diffs)
-        p = wilcoxon(a[:n], b0[:n])
-        wins = sum(1 for x in diffs if x < 0)
-        losses = sum(1 for x in diffs if x > 0)
-        print(f"{m:8s} vs B0: n={n:2d} wins={wins:2d} losses={losses:2d} "
-              f"median_diff={sorted(diffs)[n // 2]:+7.2f}s "
-              f"bootstrap95=[{lo:+7.2f},{hi:+7.2f}] wilcoxon_p={p:.4f}")
+    paired_block("method vs B1", "b1")
+    paired_block("method vs B0", "b0")
 
 
 if __name__ == "__main__":

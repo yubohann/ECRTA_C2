@@ -63,8 +63,8 @@ run_full_duration="${PRCT_RUN_FULL_DURATION:-false}"
 lkh_seed="${LKH_SEED:-1}"
 
 case "$method_mode" in
-  baseline|suppress|reach|svr|steer|eta) ;;
-  *) echo "METHOD_MODE must be baseline|suppress|reach|svr|steer|eta" >&2; exit 64 ;;
+  baseline|suppress|reach|svr|steer|eta|hop) ;;
+  *) echo "METHOD_MODE must be baseline|suppress|reach|svr|steer|eta|hop" >&2; exit 64 ;;
 esac
 if [[ "$prct_enable_peer_takeover" == "true" || "$c3_enable_marginal_gate" == "true" ]]; then
   echo "peer takeover and C3 marginal gate are disabled in the three-method protocol" >&2
