@@ -65,7 +65,7 @@ def stats_key(d, method, run_dir=None):
         "steer_all_cooled": me.get("goal_view_all_cooled", 0) or 0,
         "steer_switch": me.get("goal_switch", 0) or 0,
         "steer_margin_rej": me.get("steer_switch_margin_rejected", 0) or 0,
-        "steer_hold": me.get("steer_all_cooled_hold", 0) or 0,
+        "steer_hold": (me.get("steer_all_cooled_hold", 0) or 0) + (me.get("steer_all_cooled_wait", 0) or 0),
         "astar_diag": ec.get("astar_search_diagnostic", 0) or 0,
         "all_cooled_fallback": me.get("prct_all_cooled_fallback", 0) or 0,
         "traj_request": ec.get("traj_request", 0) or 0,
