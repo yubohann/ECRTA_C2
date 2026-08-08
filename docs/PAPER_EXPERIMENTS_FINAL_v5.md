@@ -65,8 +65,13 @@ switching must respect the dynamics state (switch margin should include a veloci
 - No comparison is significant (p > 0.08) in any batch.
 - Strongest trend: REACH vs B1 on open/2 R2: -6.53s, 8/2 wins, bootstrap95=[-20.8,-0.5],
   mwu_p=0.14; pooled n=20: -6.53s, 14/20 wins, mean -7.86s.
-- R3 partial (cubicle, 45/50): B0 71.05s best; B1 82.18s (mwu_p=0.057 borderline, consistent
-  with B1 overhead in this cell); STEER v3 75.04s (v3 fix confirmed).
+- R3 (cubicle, complete n=10, audited): B0 71.05s (10/10) best;
+  B1 85.65s (+16.4s vs B0, mwu_p=0.019); REACH 77.00s (+6.9s, p=0.029);
+  SVR 80.09s (+10.2s, p=0.028); STEER 76.31s (+3.3s, p=0.085).
+  Consistent with R1/R2: in the cubicle cell every mechanism carries overhead vs B0.
+- HOP (long-range goal selection, mechanism probe, n=7-8): trajectory hops -4%,
+  makespan med 77.0 vs B0 75.5 (0/7 wins) — no makespan benefit; reported as
+  negative-result extension in Discussion.
 - Coverage proxy (trajectory_end_reasons frontier_covered, R2 cubicle): B0 2597, B1 2544,
   REACH 2602, SVR 2391, STEER 2633 — no method sacrifices coverage.
 - LKH is not a bottleneck: ACVRP p95<=0.054s, ATSP p95<=0.003s, 0 failures.
