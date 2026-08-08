@@ -37,3 +37,10 @@
 
 - `test_aggregate_formal_batch.py`：主表排除 infra ✓、按 index 配对 ✓、wilcoxon 置换（平局安全）✓、MWU 平局 p=1.0 ✓、bootstrap 一致性 ✓
 - 全部通过（合成数据 + 边界用例）。
+
+## 补充审计（第二轮）
+
+1. **failures.jsonl 与 summary 计数器差异**：61 runs 中 6 个有 ±1~3 差异（日志写时序，如关闭瞬间）。论文统一口径：链结构用 failures.jsonl、总数用 astar.failure_diagnostic_count，并在方法节注明。
+2. **"同 seed 407 vs 0"证据**：seed_search 目录曾在磁盘清理时被移入 trash，**已恢复**（open3 seed2: afail=407, fin=2, ms=65.6；对照组 v3b pilot 同 seed afail=0）——可复现性主张有原始数据支撑。
+3. **R3 部分批次（cubicle 45/50，修正聚合器）**：B0 71.1s 最优；B1 82.2s（mwu_p=0.057 边缘，方向与 R1/R2 一致：B1 抑制有开销）；其余无显著差异；STEER v3 75.0s 接近 B0（v3 修复 load-bias 回归的证据）。
+4. **HOP 中期（n=2-3）**：跳数一致下降 10-25%；makespan 效应被方差淹没（cubicle run1 -12.5s vs run2 +16.6s）；open/2 出现"提前完成→no_grid 空转"。结论：机制有效、效应待大 n 判定。
